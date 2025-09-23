@@ -1,20 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="utf-8" />
     <title>translationStudio</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <script src="../components/webcomponentsjs/webcomponents-lite.min.js"></script>
-    <script src="../components/lodash/lodash.min.js"></script>
-    <script src="../js/bootstrap.js"></script>
-
+    <!-- Preload critical resources -->
     <link rel="stylesheet" href="../css/main.css">
 
-    <link rel="import" href="../components/polymer/polymer.html">
-    <link rel="import" href="../elements/ts-main/ts-dashboard.html">
-    <link rel="import" href="../elements/ts-main/app-theme.html">
+    <!-- Disable text selection and context menu for Electron -->
+    <style>
+        body {
+            -webkit-user-select: none;
+            -webkit-app-region: drag;
+        }
 
+        /* Allow text selection in input fields */
+        input, textarea, [contenteditable] {
+            -webkit-user-select: text;
+            -webkit-app-region: no-drag;
+        }
+
+        /* Allow dragging in specific areas */
+        .no-drag {
+            -webkit-app-region: no-drag;
+        }
+    </style>
 </head>
 <body>
-    <ts-dashboard></ts-dashboard>
+    <div id="root"></div>
+
+    <!-- Load React app -->
+    <script src="./js/bundle.js"></script>
 </body>
 </html>

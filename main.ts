@@ -1,29 +1,8 @@
 const { app, BrowserWindow, dialog, ipcMain, Menu } = require('electron');
 const path = require('path');
-const fs = require('fs');
-const fsp = fs.promises;
 const mkdirp = require('mkdirp');
 
-// Lightweight logging to file + console
-let LOG_FILE = path.join(__dirname, 'ts-debug.log');
-function log(message, data) {
-    const ts = new Date().toISOString();
-    let line = `[${ts}] ${message}`;
-    if (data !== undefined) {
-        try { line += ' ' + JSON.stringify(data); } catch (_) { line += ' ' + String(data); }
-    }
-    line += '\n';
-    try { fs.appendFileSync(LOG_FILE, line); } catch (_) {}
-    try { console.log(line.trim()); } catch (_) {}
-}
-
 const debug = /--debug/.test(process.argv[2]);
-log('Main process starting', {
-  argv: process.argv,
-  node: process.version,
-  platform: process.platform,
-  ELECTRON_RUN_AS_NODE: process.env.ELECTRON_RUN_AS_NODE || false
-});
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -31,7 +10,6 @@ let splashScreen = null;
 let mainWindow = null;
 let academyWindow = null;
 let scrollToId = null;
-let handshakeDone = false;
 
 const menuTemplate = [
     {
@@ -74,28 +52,17 @@ function getDataPath() {
 
     const dir = path.join(base, 'translationstudio');
     mkdirp.sync(dir);
-    // Switch log file to a persistent location once known
-    try { LOG_FILE = path.join(dir, 'ts-desktop.log'); log('Log file path set', LOG_FILE); } catch (_) {}
     return dir;
 }
 
 function initialize() {
     makeSingleInstance();
 
-    if (!app || typeof app.setPath !== 'function') {
-        log('Electron app API not available. Is ELECTRON_RUN_AS_NODE set?', {
-          ELECTRON_RUN_AS_NODE: process.env.ELECTRON_RUN_AS_NODE || false
-        });
-        return;
-    }
-
     app.setPath('userData', getDataPath());
 
     app.on('ready', () => {
-        log('App ready');
         createSplashWindow();
         setTimeout(() => {
-            log('Showing splash');
             splashScreen.show();
             createWindow();
         }, 500);
@@ -118,95 +85,7 @@ function initialize() {
     Menu.setApplicationMenu(menu);
 
     ipcMain.on('loading-status', function(event, status) {
-        log('IPC loading-status', status);
         splashScreen && splashScreen.webContents.send('loading-status', status);
-    });
-
-    ipcMain.on('renderer-error', function(event, payload) {
-        log('Renderer error', payload);
-    });
-
-    // Modern dialog handlers (Promise-based)
-    ipcMain.handle('dialog:open', async (event, options) => {
-        try {
-            const res = await dialog.showOpenDialog(mainWindow || null, options || {});
-            return res;
-        } catch (e) { log('dialog:open error', e && e.message); return { canceled: true, filePaths: [] }; }
-    });
-
-    ipcMain.handle('dialog:save', async (event, options) => {
-        try {
-            const res = await dialog.showSaveDialog(mainWindow || null, options || {});
-            return res;
-        } catch (e) { log('dialog:save error', e && e.message); return { canceled: true, filePath: undefined }; }
-    });
-
-    // IPC: App/userData path
-    ipcMain.handle('app:getUserDataPath', () => {
-        try { return app.getPath('userData'); } catch (e) { log('app:getUserDataPath error', e && e.message); return null; }
-    });
-
-    // IPC: Simple file helpers scoped to userData
-    ipcMain.handle('fs:ensureDir', async (event, relPath) => {
-        try {
-            const dir = path.join(app.getPath('userData'), relPath || '');
-            await fsp.mkdir(dir, { recursive: true });
-            return true;
-        } catch (e) { log('fs:ensureDir error', { relPath, err: e && e.message }); return false; }
-    });
-
-    ipcMain.handle('fs:readJson', async (event, relPath) => {
-        try {
-            const file = path.join(app.getPath('userData'), relPath);
-            const txt = await fsp.readFile(file, 'utf8');
-            return JSON.parse(txt);
-        } catch (e) { log('fs:readJson error', { relPath, err: e && e.message }); return null; }
-    });
-
-    ipcMain.handle('fs:writeJson', async (event, payload) => {
-        const { relPath, data } = payload || {};
-        try {
-            const file = path.join(app.getPath('userData'), relPath);
-            await fsp.mkdir(path.dirname(file), { recursive: true });
-            await fsp.writeFile(file, JSON.stringify(data, null, 2), 'utf8');
-            return true;
-        } catch (e) { log('fs:writeJson error', { relPath, err: e && e.message }); return false; }
-    });
-
-    ipcMain.handle('fs:readFile', async (event, relPath) => {
-        try {
-            const file = path.join(app.getPath('userData'), relPath);
-            const buf = await fsp.readFile(file);
-            return buf;
-        } catch (e) { log('fs:readFile error', { relPath, err: e && e.message }); return null; }
-    });
-
-    ipcMain.handle('fs:writeFile', async (event, payload) => {
-        const { relPath, data } = payload || {};
-        try {
-            const file = path.join(app.getPath('userData'), relPath);
-            await fsp.mkdir(path.dirname(file), { recursive: true });
-            await fsp.writeFile(file, Buffer.from(data));
-            return true;
-        } catch (e) { log('fs:writeFile error', { relPath, err: e && e.message }); return false; }
-    });
-
-    // Absolute path helpers for imports (read-only/copy-only)
-    ipcMain.handle('fs:readAbsoluteText', async (event, absPath) => {
-        try {
-            const txt = await fsp.readFile(String(absPath), 'utf8');
-            return txt;
-        } catch (e) { log('fs:readAbsoluteText error', { absPath, err: e && e.message }); return null; }
-    });
-
-    ipcMain.handle('fs:copyAbsoluteToUserData', async (event, payload) => {
-        const { absPath, relPath } = payload || {};
-        try {
-            const dst = path.join(app.getPath('userData'), relPath);
-            await fsp.mkdir(path.dirname(dst), { recursive: true });
-            await fsp.copyFile(String(absPath), dst);
-            return true;
-        } catch (e) { log('fs:copyAbsoluteToUserData error', { absPath, relPath, err: e && e.message }); return false; }
     });
 
     ipcMain.on('main-window', function(event, arg) {
@@ -221,8 +100,6 @@ function initialize() {
     });
 
     ipcMain.on('main-loading-done', function() {
-        log('IPC main-loading-done received');
-        handshakeDone = true;
         if (splashScreen && mainWindow) {
             // Launch fullscreen with DevTools open
             if (debug) {
@@ -235,7 +112,6 @@ function initialize() {
                 mainWindow.show();
             }
 
-            log('Closing splash');
             splashScreen.close();
         }
     });
@@ -341,33 +217,11 @@ function createWindow() {
     };
 
     mainWindow = new BrowserWindow(windowOptions);
-    log('Main window created');
     mainWindow.dataPath = app.getPath('userData');
     mainWindow.loadURL(
         path.join('file://', __dirname, '/dist/index.html'));
 
-    // Fallback: if renderer handshake not received in time, show main anyway
-    const fallbackMs = debug ? 1500 : 4000;
-    const handshakeTimer = setTimeout(() => {
-        if (!handshakeDone && mainWindow) {
-            log('IPC fallback: no main-loading-done received, showing main');
-            try { mainWindow.show(); } catch (_) {}
-            try { splashScreen && splashScreen.close(); } catch (_) {}
-        }
-    }, fallbackMs);
-
-    // Diagnostics from webContents
-    mainWindow.webContents.on('did-finish-load', () => log('Main did-finish-load'));
-    mainWindow.webContents.on('dom-ready', () => log('Main dom-ready'));
-    mainWindow.webContents.on('did-fail-load', (e, ec, ed, url) => log('Main did-fail-load', { ec, ed, url }));
-    mainWindow.webContents.on('console-message', (e, level, message, line, sourceId) =>
-        log('Renderer console', { level, message, line, sourceId })
-    );
-    mainWindow.webContents.on('render-process-gone', (e, details) => log('Render process gone', details));
-
     mainWindow.on('closed', () => {
-        try { clearTimeout(handshakeTimer); } catch (_) {}
-        log('Main window closed');
         if (academyWindow) {
             academyWindow.close();
             academyWindow = null;
@@ -376,12 +230,10 @@ function createWindow() {
     });
 
     mainWindow.on('maximize', function() {
-        log('Main window maximize');
         mainWindow.webContents.send('maximize');
     });
 
     mainWindow.on('unmaximize', function() {
-        log('Main window unmaximize');
         mainWindow.webContents.send('unmaximize');
     });
 }
@@ -398,12 +250,10 @@ function createSplashWindow() {
         title: 'translationStudio'
     };
     splashScreen = new BrowserWindow(windowOptions);
-    log('Splash window created');
     splashScreen.loadURL(
         'file://' + __dirname + '/dist/splash.html');
 
     splashScreen.on('closed', function() {
-        log('Splash window closed');
         splashScreen = null;
     });
 }
@@ -441,8 +291,8 @@ function makeSingleInstance() {
             return;
         }
 
-        if (typeof app.makeSingleInstance === 'function') {
-            app.makeSingleInstance(() => {
+        if (typeof (app as any).makeSingleInstance === 'function') {
+            (app as any).makeSingleInstance(() => {
                 if (mainWindow) {
                     if (mainWindow.isMinimized()) {
                         mainWindow.restore();
