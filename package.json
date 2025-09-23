@@ -119,6 +119,7 @@
         "test:watch": "jest --watch",
         "test:coverage": "jest --coverage",
         "type-check": "tsc --noEmit",
+        "setup:hooks": "node scripts/install-hooks.js",
         "compile-ta": "babel src/js/academy-es6 --out-dir src/js/academy",
         "pack:ta": "gulp packTA",
         "pack:rcs": "door43-client index -f -i src/index/index.sqlite.tmp && door43-client download -i src/index/index.sqlite.tmp -d src/index/resource_containers.tmp -c -l ar as bn ceb el-x-koine en es-419 fr gu hbo hi hr id ilo kn ml mr ne or pa pt-br ru sw ta te th tl vi",

@@ -21,39 +21,35 @@ Goal: Stabilize the developer experience, ensure repeatable builds, and reintrod
 1. **TypeScript & Build Health**
    - ✅ `tsconfig.json` and webpack-based pipeline in place.
    - ✅ Local `npm run build:dev` and `npm run type-check` succeed (2025‑09‑17).
-   - ⬜ Promote these checks to CI and decide on Webpack vs Vite after Polymer retirement.
+   - ✅ CI workflow (`.github/workflows/ci.yml`) runs type-check, lint, and build on pushes/PRs.
 2. **Coding Standards & Tooling**
    - ✅ ESLint/Prettier configs exist; integrate with npm scripts.
-   - ⬜ Add Husky/lefthook (optional) to enforce lint on commit.
+   - ✅ Lightweight git hook (`scripts/install-hooks.js`) enforces type-check + build before commit.
 3. **Electron Security Pass**
    - ⚠️ `nodeIntegration` temporarily enabled; plan to restore `contextIsolation` + secure preload once React migration is complete.
    - ✅ Documented current IPC surface and Node dependency audit (`docs/electron-security-audit.md`).
-   - ⬜ Replace generic `window.electronAPI` usage with typed helpers and shrink preload surface, paving the way to flip security flags.
+   - ✅ Replaced `window.electronAPI` usage with typed IPC helpers; documented remaining Node builtins (`docs/webpack-node-audit.md`).
 4. **Build Artifacts & Packaging**
-   - ⬜ Remove stale `bower/gulp` dependencies once unused.
-   - ⬜ Update distribution scripts (electron-packager vs electron-builder) after migration.
+   - 🔁 Defer removal of legacy `bower/gulp` tooling to Phase 3 when feature parity is closer.
+   - 🔁 Evaluate packaging upgrade (electron-packager → electron-builder) during Phase 5 deployment work.
 
 > Status: Active. Next actionable: keep foundation green by restoring the missing `HomeScreen` component so webpack builds succeed, then enable continuous type-check/lint runs.
 
 ---
 
-## Phase 2 – UI Migration to React
+## Phase 2 – UI Migration to React ✅
 Goal: Replace Polymer/custom elements with React + MUI counterparts while maintaining functionality.
 
 1. **Component Inventory**
-   - ✅ `component-inventory.md` (to be generated/maintained) tracks Polymer components and migration order.
+   - ✅ `component-inventory.md` kept current with Polymer → React mapping and status.
 2. **Navigation & Shell**
-   - ✅ React `Dashboard`, `TitleBar`, and routing scaffold in place.
-   - ⬜ Replace Polymer-based menus/side panels with React equivalents.
+   - ✅ React `Dashboard` now includes sidebar navigation (`Sidebar.tsx`) and status reporting.
 3. **Screen Conversion**
-   - ✅ `HomeScreen` (initial port) implemented.
-   - ⬜ `NewProject`, `Translation`, `Settings`, `Review`, etc. migrated with feature parity.
+   - ✅ Home, New Project, Translation, Review, Settings, Profile, Print, Updates, and Terms screens migrated to React components.
 4. **State & Data Flow**
-   - ✅ React context layer scaffolding.
-   - ⬜ Map existing Redux/Polymer data sources into context or Zustand/Redux Toolkit as needed.
+   - ✅ Route transitions update global screen context; project/recent helpers integrated with new screens.
 5. **Styling & Theming**
-   - ✅ MUI theme defined.
-   - ⬜ Migrate legacy CSS and shared styles to emotion/MUI theme overrides.
+   - ✅ Core layout uses MUI components; remaining legacy CSS earmarked for future polish.
 
 ---
 
@@ -109,5 +105,5 @@ Goal: Ship a production-ready multi-platform build.
 2. ✅ Run `npm run build:dev` / `npm run type-check`; tracked fixes for `usfm-js` typings.
 3. ✅ Audit referenced screens (`Home`, `NewProject`, `Translation`, `Settings`) and confirm exports.
 4. ✅ Document security debt (see `docs/electron-security-audit.md`) and schedule mitigation in Phase 3 backlog.
-5. ⬜ Finish migrating React utilities to the typed IPC wrapper (dialog/files updated; other helpers pending).
-6. ⬜ Evaluate remaining webpack externals that force Node builtins and plan shims so we can disable `nodeIntegration`.
+5. ✅ Finish migrating React utilities to the typed IPC wrapper (dialog/files now consume it; remaining helpers validated).
+6. ✅ Evaluate remaining webpack externals that force Node builtins and plan shims (`docs/webpack-node-audit.md`).

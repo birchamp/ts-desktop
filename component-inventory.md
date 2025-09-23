@@ -6,40 +6,37 @@ This document catalogs all Polymer components that need to be migrated to React 
 ## Component Categories
 
 ### 1. Main Application Components (`ts-main/`)
-- **ts-dashboard.html** (1438+ lines) - Main application container
-  - Dependencies: ts-app-titlebar, ts-profile, ts-home, ts-new, ts-review, ts-translate, ts-settings, ts-updates, ts-print, and all dialogs
-  - Complexity: HIGH - Main app router and state manager
-
-- **ts-app-titlebar.html** - Application title bar
-- **ts-academy-titlebar.html** - Academy window title bar
-- **ts-splash.html** - Splash screen component
-- **app-theme.html** - Global theme definitions
+- ✅ **ts-dashboard.html** → `src/components/layout/Dashboard.tsx` (React Router shell + sidebar)
+- ✅ **ts-app-titlebar.html** → `src/components/layout/TitleBar.tsx`
+- ⬜ **ts-academy-titlebar.html** (academy window – pending)
+- ⬜ **ts-splash.html** (legacy splash view – pending migration)
+- ✅ **app-theme.html** → MUI theme defined in `src/App.tsx`
 
 ### 2. Core Feature Components (`ts-home/`, `ts-new/`, `ts-review/`, `ts-translate/`, `ts-settings/`)
-- **ts-home.html** (423+ lines) - Home screen with project list
-- **ts-new.html** - New project creation flow
-- **ts-review.html** - Project review interface
-- **ts-translate.html** - Main translation interface
-- **ts-settings.html** - Application settings
+- ✅ **ts-home.html** → `src/components/screens/HomeScreen.tsx`
+- ✅ **ts-new.html** → `src/components/screens/NewProjectScreen.tsx`
+- ✅ **ts-review.html** → `src/components/screens/ReviewScreen.tsx`
+- ✅ **ts-translate.html** → `src/components/screens/TranslationScreen.tsx`
+- ✅ **ts-settings.html** → `src/components/screens/SettingsScreen.tsx`
 
 ### 3. Dialog Components (`ts-dialogs/`)
-- ts-conflict.html - Conflict resolution dialog
-- ts-container-confirm.html - Container confirmation
-- ts-export-options.html - Export configuration
-- ts-feedback.html - User feedback form
-- ts-import-confirm.html - Import confirmation
-- ts-import-options.html - Import configuration
-- ts-loading.html - Loading spinner
-- ts-print-options.html - Print configuration
-- ts-repo-search.html - Repository search
-- ts-update-options.html - Update settings
+- ✅ **ts-loading.html** → `src/components/dialogs/LoadingDialog.tsx`
+- ⬜ `ts-conflict.html`
+- ⬜ `ts-container-confirm.html`
+- ⬜ `ts-export-options.html`
+- ⬜ `ts-feedback.html`
+- ⬜ `ts-import-confirm.html`
+- ⬜ `ts-import-options.html`
+- ⬜ `ts-print-options.html`
+- ⬜ `ts-repo-search.html`
+- ⬜ `ts-update-options.html`
 
 ### 4. Supporting Components
-- **ts-profile/** - User profile management
-- **ts-print/** - Print functionality
-- **ts-updates/** - Update management
-- **ts-legal/** - Legal documents (terms, license, etc.)
-- **ts-icons/** - Icon definitions
+- ✅ **ts-profile/** → `src/components/screens/ProfileScreen.tsx`
+- ✅ **ts-print/** → `src/components/screens/PrintScreen.tsx`
+- ✅ **ts-updates/** → `src/components/screens/UpdatesScreen.tsx`
+- ✅ **ts-legal/** → `src/components/screens/TermsScreen.tsx`
+- ⬜ **ts-icons/** (consider Material Icons replacements)
 
 ## Migration Priority Strategy
 
@@ -227,6 +224,5 @@ src/
 - [ ] All current features work
 - [ ] Same user experience
 - [ ] Improved error handling
-
 
 
