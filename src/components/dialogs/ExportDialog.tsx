@@ -29,12 +29,12 @@ import {
   Error as ErrorIcon,
   Download,
   Description,
-  Folder,
   Archive,
 } from '@mui/icons-material';
 import React, { useState, useCallback, useEffect } from 'react';
 import { generateUSFM, ProjectMeta, TranslationChunk } from '../../services/export/exporter';
 import { projectRepository, ProjectRecord } from '../../services/projectRepository';
+import { readText } from '../../utils/files';
 
 interface ExportDialogProps {
   open: boolean;
@@ -112,11 +112,10 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ open, onClose, projectId })
       if (!project) {
         throw new Error('Project not found');
       }
+      const assets = await projectRepository.getProjectAssets(project.id);
 
       setProgress(20);
 
-      // Get project chunks from storage
-      // For now, generate placeholder chunks - in production, load from actual storage
       const chunks: TranslationChunk[] = [];
       const meta: ProjectMeta = {
         project: {
@@ -141,18 +140,19 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ open, onClose, projectId })
 
       let content = '';
       let filename = '';
+      const importedUsfm = assets?.sourceUsfmPath ? await readText(assets.sourceUsfmPath) : null;
 
       if (exportFormat === 'usfm') {
-        content = generateUSFM(chunks, meta);
+        content = importedUsfm?.trim() ? `${importedUsfm.trim()}\n` : generateUSFM(chunks, meta);
         filename = `${project.name.replace(/\s+/g, '_')}.usfm`;
       } else if (exportFormat === 'markdown') {
-        // For markdown, we'd need to handle multiple files
-        content = `# ${project.name}\n\nExported translation project.\n`;
+        const markdownBody = importedUsfm?.trim()
+          ? `\`\`\`usfm\n${importedUsfm.trim()}\n\`\`\`\n`
+          : 'Exported translation project.\n';
+        content = `# ${project.name}\n\n${markdownBody}`;
         filename = `${project.name.replace(/\s+/g, '_')}.md`;
       } else {
-        // Backup format - would create a zip file
-        filename = `${project.name.replace(/\s+/g, '_')}.tstudio`;
-        // TODO: Implement backup zip creation
+        throw new Error('Backup export is not implemented yet in the modern build.');
       }
 
       setProgress(70);

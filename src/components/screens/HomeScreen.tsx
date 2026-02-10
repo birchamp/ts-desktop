@@ -56,16 +56,19 @@ const HomeScreen: React.FC = () => {
 
   const handleImportProject = async () => {
     const res = await openFile([
-      { name: 'USFM or Project Archive', extensions: ['usfm', 'zip', 'tsproj'] },
+      {
+        name: 'USFM or Project Archive',
+        extensions: ['usfm', 'sfm', 'txt', 'zip', 'tsproj', 'tstudio'],
+      },
     ]);
     if (res.canceled || !res.filePaths.length) return;
     const filePath = res.filePaths[0];
-    if (/\.usfm$/i.test(filePath)) {
+    if (/\.(usfm|sfm|txt)$/i.test(filePath)) {
       await importUsfm(filePath, 'en');
       await refresh();
     } else {
       const fileName = filePath.split(/[\\/]/).pop() || 'Imported Project';
-      const baseName = fileName.replace(/\.(zip|tsproj)$/i, '');
+      const baseName = fileName.replace(/\.(zip|tsproj|tstudio)$/i, '');
       const id = Date.now().toString();
       await projectRepository.createProject(
         {

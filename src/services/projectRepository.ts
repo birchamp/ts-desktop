@@ -17,6 +17,13 @@ export interface RecentProjectRecord {
   lastOpened: number;
 }
 
+export interface ProjectAssetRecord {
+  projectId: string;
+  sourceUsfmPath: string | null;
+  parsedJsonPath: string | null;
+  updatedAt: number;
+}
+
 export interface ProjectCreateInput {
   id?: string;
   name: string;
@@ -145,6 +152,7 @@ export class ProjectRepository {
         db.transaction(tx => {
           tx.run(`DELETE FROM app_projects WHERE id = ?`, [id]);
           tx.run(`DELETE FROM app_recent_projects WHERE id = ?`, [id]);
+          tx.run(`DELETE FROM app_project_assets WHERE projectId = ?`, [id]);
         });
       },
       { save: true }
@@ -195,6 +203,54 @@ export class ProjectRepository {
          ORDER BY lastOpened DESC
          LIMIT ?`,
         [limit]
+      )
+    );
+  }
+
+  async upsertProjectAssets(
+    projectId: string,
+    assets: {
+      sourceUsfmPath?: string | null;
+      parsedJsonPath?: string | null;
+      updatedAt?: number;
+    }
+  ): Promise<ProjectAssetRecord> {
+    const existing = await this.getProjectAssets(projectId);
+    const next: ProjectAssetRecord = {
+      projectId,
+      sourceUsfmPath: assets.sourceUsfmPath ?? existing?.sourceUsfmPath ?? null,
+      parsedJsonPath: assets.parsedJsonPath ?? existing?.parsedJsonPath ?? null,
+      updatedAt: assets.updatedAt ?? Date.now(),
+    };
+
+    await withDatabase(
+      db => {
+        db.transaction(tx => {
+          tx.run(
+            `INSERT OR REPLACE INTO app_project_assets (projectId, sourceUsfmPath, parsedJsonPath, updatedAt)
+           VALUES (?, ?, ?, ?)`,
+            normalizeParams([
+              next.projectId,
+              next.sourceUsfmPath,
+              next.parsedJsonPath,
+              next.updatedAt,
+            ])
+          );
+        });
+      },
+      { save: true }
+    );
+
+    return next;
+  }
+
+  async getProjectAssets(projectId: string): Promise<ProjectAssetRecord | null> {
+    return withDatabase(db =>
+      db.get<ProjectAssetRecord>(
+        `SELECT projectId, sourceUsfmPath, parsedJsonPath, updatedAt
+         FROM app_project_assets
+         WHERE projectId = ?`,
+        [projectId]
       )
     );
   }

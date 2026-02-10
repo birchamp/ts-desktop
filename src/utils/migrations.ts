@@ -33,6 +33,18 @@ const MIGRATIONS: Migration[] = [
       );`);
     },
   },
+  {
+    version: 2,
+    name: 'create-project-assets-table',
+    up: db => {
+      db.exec(`CREATE TABLE IF NOT EXISTS app_project_assets (
+        projectId TEXT PRIMARY KEY,
+        sourceUsfmPath TEXT,
+        parsedJsonPath TEXT,
+        updatedAt INTEGER NOT NULL
+      );`);
+    },
+  },
 ];
 
 function getCurrentVersion(db: DatabaseHandle): number {

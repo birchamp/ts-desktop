@@ -29,8 +29,7 @@ import {
 } from '@mui/material';
 import { Description, CheckCircle, Error as ErrorIcon, Upload, Folder } from '@mui/icons-material';
 import React, { useState, useCallback } from 'react';
-import { ImportService, extractProjectIdFromUSFM } from '../../services/import/importer';
-import { projectRepository } from '../../services/projectRepository';
+import { importUsfm } from '../../utils/import/usfm';
 
 interface ImportDialogProps {
   open: boolean;
@@ -117,26 +116,10 @@ const ImportDialog: React.FC<ImportDialogProps> = ({ open, onClose, onImportComp
         setProgress(((i + 0.5) / selectedFiles.length) * 100);
 
         if (file.type === 'usfm') {
-          // Read file content as text
-          const content = await window.electronAPI?.fs.readAbsoluteText(file.path);
-          if (content) {
-            const projectId = extractProjectIdFromUSFM(content);
-            if (projectId) {
-              // Create project record
-              await projectRepository.createProject(
-                {
-                  id: projectId,
-                  name: file.name.replace(/\.(usfm|sfm|txt)$/i, ''),
-                  type: 'translation',
-                  language: targetLanguage,
-                  progress: 0,
-                  lastModified: Date.now(),
-                },
-                { recordRecent: true }
-              );
-              lastProjectId = projectId;
-              totalImported++;
-            }
+          const imported = await importUsfm(file.path, targetLanguage);
+          if (imported) {
+            lastProjectId = imported.projectId;
+            totalImported++;
           }
         } else if (file.type === 'archive') {
           // TODO: Handle archive imports

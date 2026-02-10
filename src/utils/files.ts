@@ -70,6 +70,17 @@ export async function readFile(relPath: string): Promise<Uint8Array | null> {
   }
 }
 
+export async function readText(relPath: string): Promise<string | null> {
+  const data = await readFile(relPath);
+  if (!data) return null;
+  try {
+    const decoder = new TextDecoder();
+    return decoder.decode(data);
+  } catch {
+    return null;
+  }
+}
+
 export async function writeFile(relPath: string, data: Uint8Array): Promise<boolean> {
   try {
     const bridge = getBridge();

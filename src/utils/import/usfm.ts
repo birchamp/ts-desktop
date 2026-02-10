@@ -8,6 +8,7 @@ import {
   copyAbsoluteToUserData,
 } from '../files';
 import { projectRepository } from '../../services/projectRepository';
+import { ImportService } from '../../services/import/importer';
 
 export interface UsfmImportResult {
   projectId: string;
@@ -21,12 +22,15 @@ export async function importUsfm(
   languageFallback = 'en'
 ): Promise<UsfmImportResult | null> {
   const fileName = path.basename(absFilePath);
-  const baseName = fileName.replace(/\.usfm$/i, '');
   const id = Date.now().toString();
   const projDir = `projects/${id}`;
 
   const text = await readAbsoluteText(absFilePath);
   if (!text) return null;
+
+  const analyzed = ImportService.analyzeUSFM(text);
+  const inferredName =
+    analyzed.projectName || fileName.replace(/\.(usfm|sfm|txt)$/i, '') || analyzed.projectId || id;
 
   // Parse USFM to JSON using usfm-js
   let parsed: any = null;
@@ -54,16 +58,20 @@ export async function importUsfm(
   // Persist project metadata in DB
   await projectRepository.createProject({
     id,
-    name: baseName,
+    name: inferredName,
     type: 'translation',
     language: languageFallback,
     progress: 0,
     lastModified: Date.now(),
   });
+  await projectRepository.upsertProjectAssets(id, {
+    sourceUsfmPath: `${projDir}/source.usfm`,
+    parsedJsonPath: `${projDir}/parsed.json`,
+  });
 
   return {
     projectId: id,
-    name: baseName,
+    name: inferredName,
     language: languageFallback,
     savedPaths: { usfm: `${projDir}/source.usfm`, parsed: `${projDir}/parsed.json` },
   };
