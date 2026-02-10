@@ -53,7 +53,7 @@ Planned near-term branches:
 
 1. [x] `codex/g0-lint-remediation`
 2. [x] `codex/g0-ci-lint-blocking`
-3. [ ] `codex/g0-ci-audit-check`
+3. [x] `codex/g0-ci-audit-check`
 4. [ ] `codex/g1-macos-parity-checklist`
 5. [ ] `codex/g1-import-export-parity`
 
@@ -156,7 +156,8 @@ Exit criteria:
 Progress update:
 
 - `codex/g0-lint-remediation` and `codex/g0-ci-lint-blocking` are merged to `master`.
-- `codex/g0-ci-audit-check` is the active branch.
+- `codex/g0-ci-audit-check` is merged to `master`.
+- `codex/g1-macos-parity-checklist` is the active branch.
 
 ## Decision Log
 
