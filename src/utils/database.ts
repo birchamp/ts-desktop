@@ -26,18 +26,16 @@ function bindParams(stmt: any, params?: SqlParams) {
 export async function openDatabase(relPath: string, schemaSql?: string): Promise<DatabaseHandle> {
   const sqlJsValue = initSqlJs as unknown;
   const sqlJsObject =
-    sqlJsValue && typeof sqlJsValue === 'object'
-      ? (sqlJsValue as Record<string, unknown>)
-      : null;
+    sqlJsValue && typeof sqlJsValue === 'object' ? (sqlJsValue as Record<string, unknown>) : null;
   const sqlJsDefault = sqlJsObject?.default as SqlJsFactory | SqlJsModule | undefined;
 
   let SQL: SqlJsModule;
   if (typeof sqlJsValue === 'function') {
-    SQL = await (sqlJsValue as SqlJsFactory)({ locateFile: (f) => `/${f}` });
+    SQL = await (sqlJsValue as SqlJsFactory)({ locateFile: f => `/${f}` });
   } else if (sqlJsValue && typeof (sqlJsValue as SqlJsModule).Database === 'function') {
     SQL = sqlJsValue as SqlJsModule;
   } else if (typeof sqlJsDefault === 'function') {
-    SQL = await (sqlJsDefault as SqlJsFactory)({ locateFile: (f) => `/${f}` });
+    SQL = await (sqlJsDefault as SqlJsFactory)({ locateFile: f => `/${f}` });
   } else if (sqlJsDefault && typeof (sqlJsDefault as SqlJsModule).Database === 'function') {
     SQL = sqlJsDefault as SqlJsModule;
   } else {

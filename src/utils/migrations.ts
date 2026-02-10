@@ -15,7 +15,7 @@ const MIGRATIONS: Migration[] = [
   {
     version: 1,
     name: 'create-project-and-recent-tables',
-    up: (db) => {
+    up: db => {
       db.exec(`CREATE TABLE IF NOT EXISTS app_projects (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
@@ -36,9 +36,7 @@ const MIGRATIONS: Migration[] = [
 ];
 
 function getCurrentVersion(db: DatabaseHandle): number {
-  const row = db.get<{ value: string }>(
-    `SELECT value FROM app_meta WHERE key = 'schemaVersion'`
-  );
+  const row = db.get<{ value: string }>(`SELECT value FROM app_meta WHERE key = 'schemaVersion'`);
   if (!row) return 0;
   const parsed = parseInt(row.value, 10);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -58,7 +56,7 @@ export function runMigrations(db: DatabaseHandle): boolean {
 
   for (const migration of sorted) {
     if (migration.version <= currentVersion) continue;
-    db.transaction((tx) => {
+    db.transaction(tx => {
       migration.up(tx);
       setCurrentVersion(tx, migration.version);
     });

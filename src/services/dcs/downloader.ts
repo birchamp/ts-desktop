@@ -44,20 +44,12 @@ function parseOwner(manifest: ResourceManifest): string {
 
 function parseVersion(manifest: ResourceManifest): string {
   return (
-    manifest.resource?.version ||
-    manifest.version ||
-    manifest.dublin_core?.version ||
-    'unknown'
+    manifest.resource?.version || manifest.version || manifest.dublin_core?.version || 'unknown'
   );
 }
 
 function parseName(manifest: ResourceManifest, fallback: string): string {
-  return (
-    manifest.resource?.name ||
-    manifest.name ||
-    manifest.dublin_core?.identifier ||
-    fallback
-  );
+  return manifest.resource?.name || manifest.name || manifest.dublin_core?.identifier || fallback;
 }
 
 function parseId(manifest: ResourceManifest, fallback: string): string {
@@ -89,8 +81,8 @@ async function listCached(): Promise<CachedResource[]> {
 
   const resources = await Promise.all(
     entries
-      .filter((entry) => entry.isDirectory())
-      .map(async (entry) => {
+      .filter(entry => entry.isDirectory())
+      .map(async entry => {
         const containerPath = path.join(resourcesRoot, entry.name);
         const manifestPath = path.join(containerPath, 'package.json');
         const manifest = await readManifest(manifestPath);

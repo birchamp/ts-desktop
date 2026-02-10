@@ -1,6 +1,12 @@
 import USFM from 'usfm-js';
 import path from 'path';
-import { ensureDir, writeJson, writeText, readAbsoluteText, copyAbsoluteToUserData } from '../files';
+import {
+  ensureDir,
+  writeJson,
+  writeText,
+  readAbsoluteText,
+  copyAbsoluteToUserData,
+} from '../files';
 import { projectRepository } from '../../services/projectRepository';
 
 export interface UsfmImportResult {
@@ -10,7 +16,10 @@ export interface UsfmImportResult {
   savedPaths: { usfm: string; parsed: string };
 }
 
-export async function importUsfm(absFilePath: string, languageFallback = 'en'): Promise<UsfmImportResult | null> {
+export async function importUsfm(
+  absFilePath: string,
+  languageFallback = 'en'
+): Promise<UsfmImportResult | null> {
   const fileName = path.basename(absFilePath);
   const baseName = fileName.replace(/\.usfm$/i, '');
   const id = Date.now().toString();

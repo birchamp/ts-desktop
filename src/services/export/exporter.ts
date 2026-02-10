@@ -118,4 +118,3 @@ export function generateUSFM(chunks: TranslationChunk[], meta: ProjectMeta): str
 
   return `${lines.join('\n').trim()}\n`;
 }
-

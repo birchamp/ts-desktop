@@ -46,7 +46,7 @@ const DashboardContent: React.FC = () => {
         height: '100vh',
         backgroundColor: '#f5f5f5',
       }}
-      className="no-drag"
+      className='no-drag'
     >
       <TitleBar />
 
@@ -71,16 +71,16 @@ const DashboardContent: React.FC = () => {
           }}
         >
           <Routes>
-            <Route path="/" element={<Navigate to="/home" replace />} />
-            <Route path="/home" element={<HomeScreen />} />
-            <Route path="/new" element={<NewProjectScreen />} />
-            <Route path="/translate" element={<TranslationScreen />} />
-            <Route path="/review" element={<ReviewScreen />} />
-            <Route path="/settings" element={<SettingsScreen />} />
-            <Route path="/profile" element={<ProfileScreen />} />
-            <Route path="/print" element={<PrintScreen />} />
-            <Route path="/updates" element={<UpdatesScreen />} />
-            <Route path="/terms" element={<TermsScreen />} />
+            <Route path='/' element={<Navigate to='/home' replace />} />
+            <Route path='/home' element={<HomeScreen />} />
+            <Route path='/new' element={<NewProjectScreen />} />
+            <Route path='/translate' element={<TranslationScreen />} />
+            <Route path='/review' element={<ReviewScreen />} />
+            <Route path='/settings' element={<SettingsScreen />} />
+            <Route path='/profile' element={<ProfileScreen />} />
+            <Route path='/print' element={<PrintScreen />} />
+            <Route path='/updates' element={<UpdatesScreen />} />
+            <Route path='/terms' element={<TermsScreen />} />
           </Routes>
         </Paper>
       </Box>

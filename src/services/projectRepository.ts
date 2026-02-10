@@ -55,34 +55,43 @@ function normalizeParams(params: SqlParams | undefined): SqlParams | undefined {
   if (Array.isArray(params)) {
     return params.map(value => (value instanceof Date ? value.getTime() : value)) as SqlParams;
   }
-  const entries = Object.entries(params).map(([key, value]) => [key, value instanceof Date ? value.getTime() : value]);
+  const entries = Object.entries(params).map(([key, value]) => [
+    key,
+    value instanceof Date ? value.getTime() : value,
+  ]);
   return Object.fromEntries(entries);
 }
 
 export class ProjectRepository {
-  async createProject(input: ProjectCreateInput, options: { recordRecent?: boolean } = {}): Promise<ProjectRecord> {
+  async createProject(
+    input: ProjectCreateInput,
+    options: { recordRecent?: boolean } = {}
+  ): Promise<ProjectRecord> {
     const id = input.id ?? Date.now().toString();
     const lastModified = input.lastModified ?? Date.now();
     const lastOpened = input.lastOpened ?? lastModified;
     const progress = input.progress ?? 0;
     const type = input.type ?? 'translation';
 
-    await withDatabase((db) => {
-      db.transaction((tx) => {
-        tx.run(
-          `INSERT OR REPLACE INTO app_projects (id, name, type, language, progress, lastModified)
-           VALUES (?, ?, ?, ?, ?, ?)` ,
-          normalizeParams([id, input.name, type, input.language, progress, lastModified])
-        );
-        if (options.recordRecent !== false) {
+    await withDatabase(
+      db => {
+        db.transaction(tx => {
           tx.run(
-            `INSERT OR REPLACE INTO app_recent_projects (id, name, language, lastOpened)
-             VALUES (?, ?, ?, ?)` ,
-            normalizeParams([id, input.name, input.language, lastOpened])
+            `INSERT OR REPLACE INTO app_projects (id, name, type, language, progress, lastModified)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+            normalizeParams([id, input.name, type, input.language, progress, lastModified])
           );
-        }
-      });
-    }, { save: true });
+          if (options.recordRecent !== false) {
+            tx.run(
+              `INSERT OR REPLACE INTO app_recent_projects (id, name, language, lastOpened)
+             VALUES (?, ?, ?, ?)`,
+              normalizeParams([id, input.name, input.language, lastOpened])
+            );
+          }
+        });
+      },
+      { save: true }
+    );
 
     return {
       id,
@@ -94,7 +103,10 @@ export class ProjectRepository {
     };
   }
 
-  async updateProject(id: string, updates: Partial<Omit<ProjectRecord, 'id'>>): Promise<ProjectRecord | null> {
+  async updateProject(
+    id: string,
+    updates: Partial<Omit<ProjectRecord, 'id'>>
+  ): Promise<ProjectRecord | null> {
     const existing = await this.getProjectById(id);
     if (!existing) return null;
 
@@ -104,30 +116,43 @@ export class ProjectRepository {
       lastModified: updates.lastModified ?? Date.now(),
     };
 
-    await withDatabase((db) => {
-      db.transaction((tx) => {
-        tx.run(
-          `INSERT OR REPLACE INTO app_projects (id, name, type, language, progress, lastModified)
-           VALUES (?, ?, ?, ?, ?, ?)` ,
-          normalizeParams([next.id, next.name, next.type, next.language, next.progress, next.lastModified])
-        );
-      });
-    }, { save: true });
+    await withDatabase(
+      db => {
+        db.transaction(tx => {
+          tx.run(
+            `INSERT OR REPLACE INTO app_projects (id, name, type, language, progress, lastModified)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+            normalizeParams([
+              next.id,
+              next.name,
+              next.type,
+              next.language,
+              next.progress,
+              next.lastModified,
+            ])
+          );
+        });
+      },
+      { save: true }
+    );
 
     return next;
   }
 
   async deleteProject(id: string): Promise<void> {
-    await withDatabase((db) => {
-      db.transaction((tx) => {
-        tx.run(`DELETE FROM app_projects WHERE id = ?`, [id]);
-        tx.run(`DELETE FROM app_recent_projects WHERE id = ?`, [id]);
-      });
-    }, { save: true });
+    await withDatabase(
+      db => {
+        db.transaction(tx => {
+          tx.run(`DELETE FROM app_projects WHERE id = ?`, [id]);
+          tx.run(`DELETE FROM app_recent_projects WHERE id = ?`, [id]);
+        });
+      },
+      { save: true }
+    );
   }
 
   async listProjects(): Promise<ProjectRecord[]> {
-    return withDatabase((db) =>
+    return withDatabase(db =>
       db.all<ProjectRecord>(
         `SELECT id, name, type, language, progress, lastModified
          FROM app_projects
@@ -137,7 +162,7 @@ export class ProjectRepository {
   }
 
   async getProjectById(id: string): Promise<ProjectRecord | null> {
-    return withDatabase((db) =>
+    return withDatabase(db =>
       db.get<ProjectRecord>(
         `SELECT id, name, type, language, progress, lastModified
          FROM app_projects
@@ -148,19 +173,22 @@ export class ProjectRepository {
   }
 
   async recordRecent(entry: RecentProjectRecord): Promise<void> {
-    await withDatabase((db) => {
-      db.transaction((tx) => {
-        tx.run(
-          `INSERT OR REPLACE INTO app_recent_projects (id, name, language, lastOpened)
-           VALUES (?, ?, ?, ?)` ,
-          normalizeParams([entry.id, entry.name, entry.language, entry.lastOpened])
-        );
-      });
-    }, { save: true });
+    await withDatabase(
+      db => {
+        db.transaction(tx => {
+          tx.run(
+            `INSERT OR REPLACE INTO app_recent_projects (id, name, language, lastOpened)
+           VALUES (?, ?, ?, ?)`,
+            normalizeParams([entry.id, entry.name, entry.language, entry.lastOpened])
+          );
+        });
+      },
+      { save: true }
+    );
   }
 
   async listRecentProjects(limit = 5): Promise<RecentProjectRecord[]> {
-    return withDatabase((db) =>
+    return withDatabase(db =>
       db.all<RecentProjectRecord>(
         `SELECT id, name, language, lastOpened
          FROM app_recent_projects

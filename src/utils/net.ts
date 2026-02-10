@@ -43,7 +43,10 @@ export async function request<T = unknown>(payload: HttpRequest): Promise<HttpRe
   }
 }
 
-export async function get<T = unknown>(url: string, options: Partial<HttpRequest> = {}): Promise<HttpResponse<T>> {
+export async function get<T = unknown>(
+  url: string,
+  options: Partial<HttpRequest> = {}
+): Promise<HttpResponse<T>> {
   return request<T>({
     url,
     method: 'GET',

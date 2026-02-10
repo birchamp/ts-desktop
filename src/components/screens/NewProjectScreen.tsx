@@ -27,14 +27,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import {
-  ArrowBack,
-  ArrowForward,
-  Check,
-  CloudDownload,
-  MenuBook,
-  Save,
-} from '@mui/icons-material';
+import { ArrowBack, ArrowForward, Check, CloudDownload, MenuBook, Save } from '@mui/icons-material';
 import { SelectChangeEvent } from '@mui/material/Select';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -149,10 +142,10 @@ const LANGUAGES = [
 const NewProjectScreen: React.FC = () => {
   const navigate = useNavigate();
   const { dispatch } = useApp();
-  
+
   // Step state
   const [activeStep, setActiveStep] = useState(0);
-  
+
   // Form state
   const [availableResources, setAvailableResources] = useState<CachedResource[]>([]);
   const [selectedResource, setSelectedResource] = useState<CachedResource | null>(null);
@@ -207,7 +200,7 @@ const NewProjectScreen: React.FC = () => {
     };
 
     dispatch({ type: 'ADD_PROJECT', payload: { ...newProject, lastModified: new Date() } });
-    
+
     try {
       await projectRepository.createProject(
         {
@@ -223,7 +216,7 @@ const NewProjectScreen: React.FC = () => {
     } catch (e) {
       console.error('Failed to save project:', e);
     }
-    
+
     navigate('/translate');
   };
 
@@ -246,22 +239,23 @@ const NewProjectScreen: React.FC = () => {
 
   const renderResourceStep = () => (
     <Box>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-        Select a downloaded resource to use as the source text for your translation.
-        If you haven't downloaded any resources yet, you can still create a project.
+      <Typography variant='body1' color='text.secondary' sx={{ mb: 3 }}>
+        Select a downloaded resource to use as the source text for your translation. If you haven't
+        downloaded any resources yet, you can still create a project.
       </Typography>
 
       {availableResources.length === 0 ? (
         <Alert
-          severity="info"
+          severity='info'
           action={
-            <Button color="inherit" size="small" onClick={() => navigate('/resources')}>
+            <Button color='inherit' size='small' onClick={() => navigate('/resources')}>
               <CloudDownload sx={{ mr: 1 }} />
               Download Resources
             </Button>
           }
         >
-          No resources downloaded yet. Download resources for word-level alignment and translation notes.
+          No resources downloaded yet. Download resources for word-level alignment and translation
+          notes.
         </Alert>
       ) : (
         <List>
@@ -279,16 +273,14 @@ const NewProjectScreen: React.FC = () => {
                 primary={resource.name}
                 secondary={`${resource.owner} • v${resource.version}`}
               />
-              {selectedResource?.id === resource.id && (
-                <Check color="primary" />
-              )}
+              {selectedResource?.id === resource.id && <Check color='primary' />}
             </ListItemButton>
           ))}
         </List>
       )}
 
       {availableResources.length > 0 && !selectedResource && (
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+        <Typography variant='body2' color='text.secondary' sx={{ mt: 2 }}>
           You can skip resource selection to use demo mode without alignment data.
         </Typography>
       )}
@@ -297,13 +289,13 @@ const NewProjectScreen: React.FC = () => {
 
   const renderBookStep = () => (
     <Box>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+      <Typography variant='body1' color='text.secondary' sx={{ mb: 3 }}>
         Select the book you want to translate.
       </Typography>
 
       <Grid container spacing={2}>
         <Grid item xs={6}>
-          <Typography variant="subtitle2" gutterBottom>
+          <Typography variant='subtitle2' gutterBottom>
             Old Testament
           </Typography>
           <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
@@ -316,14 +308,14 @@ const NewProjectScreen: React.FC = () => {
                   dense
                 >
                   <ListItemText primary={book.name} />
-                  {selectedBook?.id === book.id && <Check color="primary" fontSize="small" />}
+                  {selectedBook?.id === book.id && <Check color='primary' fontSize='small' />}
                 </ListItemButton>
               ))}
             </List>
           </Box>
         </Grid>
         <Grid item xs={6}>
-          <Typography variant="subtitle2" gutterBottom>
+          <Typography variant='subtitle2' gutterBottom>
             New Testament
           </Typography>
           <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
@@ -336,7 +328,7 @@ const NewProjectScreen: React.FC = () => {
                   dense
                 >
                   <ListItemText primary={book.name} />
-                  {selectedBook?.id === book.id && <Check color="primary" fontSize="small" />}
+                  {selectedBook?.id === book.id && <Check color='primary' fontSize='small' />}
                 </ListItemButton>
               ))}
             </List>
@@ -346,7 +338,7 @@ const NewProjectScreen: React.FC = () => {
 
       {selectedBook && (
         <Box sx={{ mt: 2, p: 2, backgroundColor: 'action.selected', borderRadius: 1 }}>
-          <Typography variant="body2">
+          <Typography variant='body2'>
             Selected: <strong>{selectedBook.name}</strong>
           </Typography>
         </Box>
@@ -356,7 +348,7 @@ const NewProjectScreen: React.FC = () => {
 
   const renderDetailsStep = () => (
     <Box>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+      <Typography variant='body1' color='text.secondary' sx={{ mb: 3 }}>
         Enter the project details for your translation.
       </Typography>
 
@@ -364,20 +356,20 @@ const NewProjectScreen: React.FC = () => {
         <Grid item xs={12}>
           <TextField
             fullWidth
-            label="Project Name"
+            label='Project Name'
             value={projectName}
-            onChange={(e) => setProjectName(e.target.value)}
-            variant="outlined"
+            onChange={e => setProjectName(e.target.value)}
+            variant='outlined'
           />
         </Grid>
 
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth variant="outlined">
+          <FormControl fullWidth variant='outlined'>
             <InputLabel>Target Language</InputLabel>
             <Select
               value={targetLanguage}
               onChange={(e: SelectChangeEvent) => setTargetLanguage(e.target.value)}
-              label="Target Language"
+              label='Target Language'
             >
               {LANGUAGES.map(lang => (
                 <MenuItem key={lang.code} value={lang.code}>
@@ -391,10 +383,10 @@ const NewProjectScreen: React.FC = () => {
         <Grid item xs={12}>
           <TextField
             fullWidth
-            label="Description (Optional)"
+            label='Description (Optional)'
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            variant="outlined"
+            onChange={e => setDescription(e.target.value)}
+            variant='outlined'
             multiline
             rows={3}
           />
@@ -403,18 +395,17 @@ const NewProjectScreen: React.FC = () => {
 
       <Divider sx={{ my: 3 }} />
 
-      <Typography variant="subtitle2" gutterBottom>
+      <Typography variant='subtitle2' gutterBottom>
         Project Summary
       </Typography>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-        {selectedResource && (
-          <Chip label={`Resource: ${selectedResource.name}`} size="small" />
-        )}
-        {selectedBook && (
-          <Chip label={`Book: ${selectedBook.name}`} size="small" color="primary" />
-        )}
-        <Chip label={`Language: ${LANGUAGES.find(l => l.code === targetLanguage)?.name}`} size="small" />
-        <Chip label="Format: DCS" size="small" variant="outlined" />
+        {selectedResource && <Chip label={`Resource: ${selectedResource.name}`} size='small' />}
+        {selectedBook && <Chip label={`Book: ${selectedBook.name}`} size='small' color='primary' />}
+        <Chip
+          label={`Language: ${LANGUAGES.find(l => l.code === targetLanguage)?.name}`}
+          size='small'
+        />
+        <Chip label='Format: DCS' size='small' variant='outlined' />
       </Box>
     </Box>
   );
@@ -449,13 +440,10 @@ const NewProjectScreen: React.FC = () => {
           gap: 2,
         }}
       >
-        <Button
-          onClick={() => navigate('/home')}
-          sx={{ color: 'white', minWidth: 'auto' }}
-        >
+        <Button onClick={() => navigate('/home')} sx={{ color: 'white', minWidth: 'auto' }}>
           <ArrowBack />
         </Button>
-        <Typography variant="h5" component="h1">
+        <Typography variant='h5' component='h1'>
           Create New Project
         </Typography>
       </Box>
@@ -474,9 +462,7 @@ const NewProjectScreen: React.FC = () => {
       {/* Content */}
       <Box sx={{ flex: 1, overflow: 'auto', p: 4 }}>
         <Card sx={{ maxWidth: 800, mx: 'auto' }}>
-          <CardContent sx={{ p: 4 }}>
-            {getStepContent(activeStep)}
-          </CardContent>
+          <CardContent sx={{ p: 4 }}>{getStepContent(activeStep)}</CardContent>
         </Card>
       </Box>
 
@@ -490,20 +476,16 @@ const NewProjectScreen: React.FC = () => {
           justifyContent: 'space-between',
         }}
       >
-        <Button
-          disabled={activeStep === 0}
-          onClick={handleBack}
-          startIcon={<ArrowBack />}
-        >
+        <Button disabled={activeStep === 0} onClick={handleBack} startIcon={<ArrowBack />}>
           Back
         </Button>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button variant="outlined" onClick={() => navigate('/home')}>
+          <Button variant='outlined' onClick={() => navigate('/home')}>
             Cancel
           </Button>
           {activeStep === STEPS.length - 1 ? (
             <Button
-              variant="contained"
+              variant='contained'
               onClick={handleCreateProject}
               disabled={!canProceed()}
               startIcon={<Save />}
@@ -513,7 +495,7 @@ const NewProjectScreen: React.FC = () => {
             </Button>
           ) : (
             <Button
-              variant="contained"
+              variant='contained'
               onClick={handleNext}
               disabled={!canProceed()}
               endIcon={<ArrowForward />}

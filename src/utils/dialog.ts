@@ -10,7 +10,10 @@ export interface SaveResult {
   filePath?: string;
 }
 
-export async function openFile(filters?: { name: string; extensions: string[] }[], properties: string[] = ['openFile']): Promise<OpenResult> {
+export async function openFile(
+  filters?: { name: string; extensions: string[] }[],
+  properties: string[] = ['openFile']
+): Promise<OpenResult> {
   const fallback: OpenResult = { canceled: true, filePaths: [] };
   const bridge = getBridge();
   try {

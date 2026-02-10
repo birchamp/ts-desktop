@@ -18,6 +18,7 @@ Deliver a modern Electron + React + TypeScript desktop app that behaves the same
 Open risks still present:
 
 - CI lint is non-blocking (`npm run lint || true`).
+- Full lint currently fails with existing debt (latest local run: 570 errors, 6 warnings).
 - Security posture is intentionally permissive (`nodeIntegration: true`, `contextIsolation: false`) while migration continues.
 - Feature parity is not yet proven with a formal workflow checklist.
 - Dependency risk remains high (legacy packages and known audit findings).
@@ -25,6 +26,37 @@ Open risks still present:
 ## Execution Strategy (Optimal Order)
 
 This is a gate-based plan. We do not advance to the next gate until the current gate exit criteria are met.
+
+## Branching Strategy
+
+Use short-lived, goal-specific branches and merge only after gate checks pass.
+
+Branch model:
+
+- `master`: integration baseline, always merge-ready.
+- `codex/g0-*`: Gate 0 stabilization work.
+- `codex/g1-*`: Gate 1 macOS parity work.
+- `codex/g2-*`: Gate 2 security hardening work.
+- `codex/g3-*`: Gate 3 cross-platform CI/workflow work.
+- `codex/g4-*`: Gate 4 release/distribution work.
+
+Merge rules:
+
+- One objective per branch.
+- Rebase or merge latest `master` before final validation.
+- Required pre-merge checks for every branch:
+  - `npm run type-check`
+  - `npm run build:dev`
+  - Task-specific validation (for example CI workflow validation or smoke run)
+- Merge using fast-forward when possible to keep history linear.
+
+Planned near-term branches:
+
+1. `codex/g0-lint-remediation`
+2. `codex/g0-ci-lint-blocking`
+3. `codex/g0-ci-audit-check`
+4. `codex/g1-macos-parity-checklist`
+5. `codex/g1-import-export-parity`
 
 ### Gate 0: Stabilize Build and Runtime (In Progress)
 
@@ -39,6 +71,7 @@ Completed:
 
 Exit criteria:
 
+- [ ] Lint remediation branch reduces existing lint errors to a mergeable baseline.
 - [ ] CI enforces lint (remove `|| true`).
 - [ ] CI runs `type-check`, `lint`, and `build:dev` as hard blockers.
 - [ ] Basic startup smoke test is scriptable and repeatable.

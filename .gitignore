@@ -23,3 +23,8 @@ src/logs/
 
 /unit_tests/migration/temp/
 /src/prince/
+
+# Local development artifacts
+.electron.pid
+ts-debug.log
+.vscode/
