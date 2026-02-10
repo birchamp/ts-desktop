@@ -23,13 +23,17 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: Type check
-        run: npm run build:check
+        run: npm run type-check
 
       - name: Lint
         run: npm run lint
 
       - name: Build (dev)
         run: npm run build:dev
+
+      - name: Dependency audit (high+)
+        run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true
 
       - name: Archive build artifacts
         uses: actions/upload-artifact@v4

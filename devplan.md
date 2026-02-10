@@ -17,8 +17,7 @@ Deliver a modern Electron + React + TypeScript desktop app that behaves the same
 
 Open risks still present:
 
-- CI lint is non-blocking (`npm run lint || true`).
-- Full lint currently fails with existing debt (latest local run: 570 errors, 6 warnings).
+- Lint debt is reduced to warnings, but a warning budget policy is not yet defined.
 - Security posture is intentionally permissive (`nodeIntegration: true`, `contextIsolation: false`) while migration continues.
 - Feature parity is not yet proven with a formal workflow checklist.
 - Dependency risk remains high (legacy packages and known audit findings).
@@ -52,11 +51,11 @@ Merge rules:
 
 Planned near-term branches:
 
-1. `codex/g0-lint-remediation`
-2. `codex/g0-ci-lint-blocking`
-3. `codex/g0-ci-audit-check`
-4. `codex/g1-macos-parity-checklist`
-5. `codex/g1-import-export-parity`
+1. [x] `codex/g0-lint-remediation`
+2. [x] `codex/g0-ci-lint-blocking`
+3. [ ] `codex/g0-ci-audit-check`
+4. [ ] `codex/g1-macos-parity-checklist`
+5. [ ] `codex/g1-import-export-parity`
 
 ### Gate 0: Stabilize Build and Runtime (In Progress)
 
@@ -71,9 +70,9 @@ Completed:
 
 Exit criteria:
 
-- [ ] Lint remediation branch reduces existing lint errors to a mergeable baseline.
-- [ ] CI enforces lint (remove `|| true`).
-- [ ] CI runs `type-check`, `lint`, and `build:dev` as hard blockers.
+- [x] Lint remediation branch reduces existing lint errors to a mergeable baseline.
+- [x] CI enforces lint (remove `|| true`).
+- [x] CI runs `type-check`, `lint`, and `build:dev` as hard blockers.
 - [ ] Basic startup smoke test is scriptable and repeatable.
 
 ### Gate 1: macOS Feature Parity (Highest Priority)
@@ -149,9 +148,15 @@ Exit criteria:
 ## Immediate Next Work (Recommended)
 
 1. Make CI truthful by enforcing lint failures.
-2. Create a concrete parity checklist from legacy workflows and support docs.
-3. Validate and close obvious import/export functional gaps behind the new service layer.
-4. Add initial macOS smoke script to automate launch and core navigation checks.
+2. Add CI dependency audit visibility for high-severity vulnerabilities.
+3. Create a concrete parity checklist from legacy workflows and support docs.
+4. Validate and close obvious import/export functional gaps behind the new service layer.
+5. Add initial macOS smoke script to automate launch and core navigation checks.
+
+Progress update:
+
+- `codex/g0-lint-remediation` and `codex/g0-ci-lint-blocking` are merged to `master`.
+- `codex/g0-ci-audit-check` is the active branch.
 
 ## Decision Log
 
