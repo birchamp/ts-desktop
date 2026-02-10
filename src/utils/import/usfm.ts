@@ -1,8 +1,7 @@
 import USFM from 'usfm-js';
 import path from 'path';
 import { ensureDir, writeJson, writeText, readAbsoluteText, copyAbsoluteToUserData } from '../files';
-import { addProjectToDb } from '../projects';
-import { addRecent } from '../recent';
+import { projectRepository } from '../../services/projectRepository';
 
 export interface UsfmImportResult {
   projectId: string;
@@ -44,7 +43,7 @@ export async function importUsfm(absFilePath: string, languageFallback = 'en'): 
   }
 
   // Persist project metadata in DB
-  await addProjectToDb({
+  await projectRepository.createProject({
     id,
     name: baseName,
     type: 'translation',
@@ -52,7 +51,6 @@ export async function importUsfm(absFilePath: string, languageFallback = 'en'): 
     progress: 0,
     lastModified: Date.now(),
   });
-  await addRecent({ id, name: baseName, language: languageFallback, lastOpened: Date.now() });
 
   return {
     projectId: id,
@@ -61,4 +59,3 @@ export async function importUsfm(absFilePath: string, languageFallback = 'en'): 
     savedPaths: { usfm: `${projDir}/source.usfm`, parsed: `${projDir}/parsed.json` },
   };
 }
-

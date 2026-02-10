@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const fsp = fs.promises;
 const mkdirp = require('mkdirp');
+const axios = require('axios');
 
 // Lightweight logging to file + console
 let LOG_FILE = path.join(__dirname, 'ts-debug.log');
@@ -207,6 +208,101 @@ function initialize() {
             await fsp.copyFile(String(absPath), dst);
             return true;
         } catch (e) { log('fs:copyAbsoluteToUserData error', { absPath, relPath, err: e && e.message }); return false; }
+    });
+
+    ipcMain.handle('window:minimize', () => {
+        try { mainWindow && mainWindow.minimize(); return true; }
+        catch (e) { log('window:minimize error', e && e.message); return false; }
+    });
+
+    ipcMain.handle('window:maximize', () => {
+        try {
+            if (!mainWindow) return false;
+            if (mainWindow.isMaximized()) {
+                mainWindow.unmaximize();
+            } else {
+                mainWindow.maximize();
+            }
+            return true;
+        } catch (e) { log('window:maximize error', e && e.message); return false; }
+    });
+
+    ipcMain.handle('window:close', () => {
+        try { mainWindow && mainWindow.close(); return true; }
+        catch (e) { log('window:close error', e && e.message); return false; }
+    });
+
+    ipcMain.handle('net:request', async (event, payload) => {
+        const req = payload || {};
+        const method = (req.method || 'GET').toUpperCase();
+        const url = req.url;
+        if (!url) {
+            return {
+                ok: false,
+                status: 0,
+                statusText: 'invalid-url',
+                headers: {},
+                data: null,
+                error: 'Missing request url',
+            };
+        }
+        const responseType = req.responseType || 'json';
+        const timeout = typeof req.timeoutMs === 'number' ? req.timeoutMs : undefined;
+        const headers = req.headers && typeof req.headers === 'object' ? req.headers : {};
+        let data = req.body;
+        if (data && data.type === 'Buffer' && Array.isArray(data.data)) {
+            data = Buffer.from(data.data);
+        } else if (data instanceof Uint8Array) {
+            data = Buffer.from(data);
+        }
+
+        try {
+            const res = await axios.request({
+                url,
+                method,
+                headers,
+                data,
+                timeout,
+                responseType: responseType === 'arraybuffer' ? 'arraybuffer' : responseType === 'text' ? 'text' : 'json',
+                validateStatus: () => true,
+            });
+
+            const plainHeaders = {};
+            Object.entries(res.headers || {}).forEach(([key, value]) => {
+                if (Array.isArray(value)) {
+                    plainHeaders[key] = value.join(', ');
+                } else if (value !== undefined && value !== null) {
+                    plainHeaders[key] = String(value);
+                }
+            });
+
+            let payloadData = res.data;
+            if (responseType === 'arraybuffer' && !(payloadData instanceof Buffer)) {
+                payloadData = Buffer.from(payloadData);
+            }
+            if (responseType === 'text' && typeof payloadData !== 'string') {
+                payloadData = typeof payloadData === 'object' ? JSON.stringify(payloadData) : String(payloadData);
+            }
+
+            return {
+                ok: res.status >= 200 && res.status < 300,
+                status: res.status,
+                statusText: res.statusText,
+                headers: plainHeaders,
+                data: payloadData,
+            };
+        } catch (error) {
+            const message = error && error.message ? error.message : String(error);
+            log('net:request error', { url, method, err: message });
+            return {
+                ok: false,
+                status: 0,
+                statusText: 'network-error',
+                headers: {},
+                data: null,
+                error: message,
+            };
+        }
     });
 
     ipcMain.on('main-window', function(event, arg) {

@@ -1,4 +1,4 @@
-import { invoke } from './ipc';
+import { getBridge, invoke } from './ipc';
 
 export interface OpenResult {
   canceled: boolean;
@@ -11,11 +11,17 @@ export interface SaveResult {
 }
 
 export async function openFile(filters?: { name: string; extensions: string[] }[], properties: string[] = ['openFile']): Promise<OpenResult> {
+  const fallback: OpenResult = { canceled: true, filePaths: [] };
+  const bridge = getBridge();
   try {
+    if (bridge?.dialog) {
+      const res = await bridge.dialog.open({ properties, filters });
+      return res;
+    }
     const res = await invoke<OpenResult>('dialog:open', { properties, filters });
     return res;
   } catch {
-    return { canceled: true, filePaths: [] };
+    return fallback;
   }
 }
 
@@ -24,10 +30,16 @@ export async function openDirectory(): Promise<OpenResult> {
 }
 
 export async function saveFile(defaultPath?: string): Promise<SaveResult> {
+  const fallback: SaveResult = { canceled: true };
+  const bridge = getBridge();
   try {
+    if (bridge?.dialog) {
+      const res = await bridge.dialog.save({ defaultPath });
+      return res;
+    }
     const res = await invoke<SaveResult>('dialog:save', { defaultPath });
     return res;
   } catch {
-    return { canceled: true };
+    return fallback;
   }
 }

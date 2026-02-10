@@ -6,6 +6,87 @@ var _ = require('lodash'),
     fs = require('fs'),
     trash = require('trash');
 
+function getProjectRepository() {
+    try {
+        if (typeof window !== 'undefined' && window.projectRepository) {
+            return window.projectRepository;
+        }
+    } catch (_) {}
+    return null;
+}
+
+function projectMetaToRecord(meta) {
+    if (!meta) {
+        return null;
+    }
+    var id = meta.unique_id || _makeUniqueId(meta);
+    var name = (meta.project && (meta.project.name || meta.project.id)) || 'Untitled Project';
+    var type = (meta.type && (meta.type.id || meta.type.name)) || 'translation';
+    var language = (meta.target_language && (meta.target_language.id || meta.target_language.slug || meta.target_language.name)) || 'unknown';
+    var progress = 0;
+    if (typeof meta.completion === 'number') {
+        progress = Math.max(0, Math.min(100, Math.round(meta.completion)));
+    }
+    var lastModified = meta.date_modified || meta.modified_at || Date.now();
+    return {
+        id: id,
+        name: name,
+        type: type,
+        language: language,
+        progress: progress,
+        lastModified: lastModified
+    };
+}
+
+function syncProjectMeta(meta, options) {
+    var repo = getProjectRepository();
+    if (!repo) {
+        return;
+    }
+    var record = projectMetaToRecord(meta);
+    if (!record) {
+        return;
+    }
+    var payload = {
+        id: record.id,
+        name: record.name,
+        type: record.type,
+        language: record.language,
+        progress: record.progress,
+        lastModified: record.lastModified
+    };
+    repo.createProject(payload, { recordRecent: options && options.recordRecent !== false }).catch(function () {});
+}
+
+function deleteProjectRecord(meta) {
+    var repo = getProjectRepository();
+    if (!repo) {
+        return;
+    }
+    var record = projectMetaToRecord(meta);
+    if (!record) {
+        return;
+    }
+    repo.deleteProject(record.id).catch(function () {});
+}
+
+function markProjectRecent(meta) {
+    var repo = getProjectRepository();
+    if (!repo) {
+        return;
+    }
+    var record = projectMetaToRecord(meta);
+    if (!record) {
+        return;
+    }
+    repo.recordRecent({
+        id: record.id,
+        name: record.name,
+        language: record.language,
+        lastOpened: Date.now()
+    }).catch(function () {});
+}
+
 function ProjectsManager(dataManager, configurator, reporter, git, migrator) {
 
     var targetDir = configurator.getValue('targetTranslationsDir'),
@@ -335,6 +416,7 @@ function ProjectsManager(dataManager, configurator, reporter, git, migrator) {
                 .then(function () {
                     return mythis.commitProject(meta, user, destDir);
                 }).then(function() {
+                    syncProjectMeta(meta, { recordRecent: true });
                     return Promise.resolve(paths.projectDir);
                 })
                 .catch(function (err) {
@@ -477,7 +559,10 @@ function ProjectsManager(dataManager, configurator, reporter, git, migrator) {
                 .then(flatten())
                 .then(map(readChunk))
                 .then(Promise.all.bind(Promise))
-                .then(utils.lodash.indexBy('name'));
+                .then(function (result) {
+                    markProjectRecent(meta);
+                    return utils.lodash.indexBy('name')(result);
+                });
         },
 
         unsetValues: function (key) {
@@ -493,7 +578,10 @@ function ProjectsManager(dataManager, configurator, reporter, git, migrator) {
             return utils.fs.stat(paths.projectDir).then(utils.ret(true)).catch(utils.ret(false))
                 .then(function (exists) {
                     if (exists) {
-                        return trash([paths.projectDir]);
+                        return trash([paths.projectDir]).then(function () {
+                            deleteProjectRecord(meta);
+                            return true;
+                        });
                     } else {
                         throw "Project file does not exist";
                     }
@@ -631,6 +719,7 @@ function _updateManifestToMeta (manifest, dataManager, reporter) {
         reporter.logError(err);
         return null;
     }
+    syncProjectMeta(meta, { recordRecent: false });
     return meta;
 }
 

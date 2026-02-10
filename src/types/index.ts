@@ -2,10 +2,96 @@
 
 // Electron API types
 declare global {
+  interface ElectronDialogFilter {
+    name: string;
+    extensions: string[];
+  }
+
+  interface ElectronDialogOpenOptions {
+    properties?: string[];
+    filters?: ElectronDialogFilter[];
+  }
+
+  interface ElectronDialogSaveOptions {
+    defaultPath?: string;
+    filters?: ElectronDialogFilter[];
+  }
+
+  interface ElectronDialogAPI {
+    open: (options?: ElectronDialogOpenOptions) => Promise<ElectronDialogOpenResult>;
+    save: (options?: ElectronDialogSaveOptions) => Promise<ElectronDialogSaveResult>;
+  }
+
+  interface ElectronDialogOpenResult {
+    canceled: boolean;
+    filePaths: string[];
+  }
+
+  interface ElectronDialogSaveResult {
+    canceled: boolean;
+    filePath?: string;
+  }
+
+  interface ElectronFileSystemAPI {
+    ensureDir: (relPath: string) => Promise<boolean>;
+    readJson: <T = unknown>(relPath: string) => Promise<T | null>;
+    writeJson: (relPath: string, data: unknown) => Promise<boolean>;
+    readFile: (relPath: string) => Promise<Uint8Array | null>;
+    writeFile: (relPath: string, data: Uint8Array) => Promise<boolean>;
+    readAbsoluteText: (absPath: string) => Promise<string | null>;
+    copyAbsoluteToUserData: (relPath: string, absPath: string) => Promise<boolean>;
+  }
+
+  interface ElectronAppAPI {
+    getUserDataPath: () => Promise<string | null>;
+  }
+
+  type ElectronHttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
+
+  interface ElectronNetworkRequest {
+    url: string;
+    method?: ElectronHttpMethod;
+    headers?: Record<string, string>;
+    body?: string | Uint8Array;
+    responseType?: 'text' | 'json' | 'arraybuffer';
+    timeoutMs?: number;
+  }
+
+  interface ElectronNetworkResponse<T = unknown> {
+    ok: boolean;
+    status: number;
+    statusText: string;
+    headers: Record<string, string>;
+    data: T | null;
+    error?: string;
+  }
+
+  interface ElectronNetworkAPI {
+    request: <T = unknown>(payload: ElectronNetworkRequest) => Promise<ElectronNetworkResponse<T>>;
+  }
+
+  interface ElectronWindowAPI {
+    minimize: () => void;
+    maximize: () => void;
+    close: () => void;
+  }
+
+  interface ElectronEventsAPI {
+    send: (channel: string, payload?: unknown) => boolean;
+    on: (channel: string, listener: (...args: any[]) => void) => boolean;
+  }
+
   interface ElectronBridge {
-    send?: (channel: string, payload?: unknown) => void;
+    dialog: ElectronDialogAPI;
+    fs: ElectronFileSystemAPI;
+    app: ElectronAppAPI;
+    net: ElectronNetworkAPI;
+    window: ElectronWindowAPI;
+    events: ElectronEventsAPI;
+    // Legacy compatibility
+    send?: (channel: string, payload?: unknown) => boolean | void;
+    on?: (channel: string, listener: (...args: any[]) => void) => boolean | void;
     invoke?: <T = unknown>(channel: string, payload?: unknown) => Promise<T>;
-    on?: (channel: string, listener: (...args: any[]) => void) => void;
     minimizeWindow?: () => void;
     maximizeWindow?: () => void;
     closeWindow?: () => void;
@@ -13,6 +99,7 @@ declare global {
 
   interface Window {
     electronAPI?: ElectronBridge;
+    projectRepository?: import('../services/projectRepository').ProjectRepository;
   }
 
   // Vite HMR types

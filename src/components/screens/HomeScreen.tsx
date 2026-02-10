@@ -15,8 +15,11 @@ import { Add, Delete, PlayArrow, Upload } from '@mui/icons-material';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../contexts/AppContext';
-import { listRecents, RecentProject } from '../../utils/recent';
-import { addProjectToDb, deleteProjectFromDb, listProjectsFromDb, ProjectRecord } from '../../utils/projects';
+import {
+  projectRepository,
+  RecentProjectRecord as RecentProject,
+  ProjectRecord,
+} from '../../services/projectRepository';
 import { openFile } from '../../utils/dialog';
 import { importUsfm } from '../../utils/import/usfm';
 
@@ -33,17 +36,17 @@ const HomeScreen: React.FC = () => {
 
   React.useEffect(() => {
     (async () => {
-      const items = await listRecents(5);
+      const items = await projectRepository.listRecentProjects(5);
       setRecents(items);
-      const projects = await listProjectsFromDb();
+      const projects = await projectRepository.listProjects();
       setDbProjects(projects);
     })();
   }, []);
 
   const refresh = React.useCallback(async () => {
-    const items = await listRecents(5);
+    const items = await projectRepository.listRecentProjects(5);
     setRecents(items);
-    const projects = await listProjectsFromDb();
+    const projects = await projectRepository.listProjects();
     setDbProjects(projects);
   }, []);
 
@@ -62,20 +65,23 @@ const HomeScreen: React.FC = () => {
       const fileName = filePath.split(/[\\/]/).pop() || 'Imported Project';
       const baseName = fileName.replace(/\.(zip|tsproj)$/i, '');
       const id = Date.now().toString();
-      await addProjectToDb({
-        id,
-        name: baseName,
-        type: 'translation',
-        language: 'en',
-        progress: 0,
-        lastModified: Date.now(),
-      });
+      await projectRepository.createProject(
+        {
+          id,
+          name: baseName,
+          type: 'translation',
+          language: 'en',
+          progress: 0,
+          lastModified: Date.now(),
+        },
+        { recordRecent: true }
+      );
       await refresh();
     }
   };
 
   const handleDeleteProject = async (projectId: string) => {
-    await deleteProjectFromDb(projectId);
+    await projectRepository.deleteProject(projectId);
     await refresh();
   };
 
@@ -234,4 +240,3 @@ const HomeScreen: React.FC = () => {
 };
 
 export default HomeScreen;
-

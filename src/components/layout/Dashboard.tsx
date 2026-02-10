@@ -33,8 +33,10 @@ const DashboardContent: React.FC = () => {
 
   React.useEffect(() => {
     const title = SCREEN_TITLES[location.pathname] ?? 'Home';
-    setScreen(title);
-  }, [location.pathname, setScreen]);
+    if (state.currentScreen !== title) {
+      setScreen(title);
+    }
+  }, [location.pathname, setScreen, state.currentScreen]);
 
   return (
     <Box
@@ -44,6 +46,7 @@ const DashboardContent: React.FC = () => {
         height: '100vh',
         backgroundColor: '#f5f5f5',
       }}
+      className="no-drag"
     >
       <TitleBar />
 

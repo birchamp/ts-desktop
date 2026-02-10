@@ -12,17 +12,22 @@
     <style>
         body {
             -webkit-user-select: none;
+        }
+
+        .drag-region {
             -webkit-app-region: drag;
         }
 
-        /* Allow text selection in input fields */
-        input, textarea, [contenteditable] {
+        /* Allow text selection and pointer events in interactive elements */
+        input,
+        textarea,
+        [contenteditable],
+        .no-drag {
             -webkit-user-select: text;
             -webkit-app-region: no-drag;
         }
 
-        /* Allow dragging in specific areas */
-        .no-drag {
+        .no-drag * {
             -webkit-app-region: no-drag;
         }
     </style>

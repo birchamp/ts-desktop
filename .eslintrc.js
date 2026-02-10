@@ -8,39 +8,21 @@ module.exports = {
   },
   extends: [
     'eslint:recommended',
-    'plugin:@typescript-eslint/recommended',
-    'plugin:@typescript-eslint/recommended-requiring-type-checking',
     'plugin:prettier/recommended'
   ],
-  parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 12,
     sourceType: 'module',
-    project: './tsconfig.json',
-    tsconfigRootDir: __dirname,
     ecmaFeatures: {
       jsx: true
     }
   },
-  plugins: ['@typescript-eslint'],
   rules: {
-    // TypeScript specific rules
-    '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-    '@typescript-eslint/explicit-function-return-type': 'off',
-    '@typescript-eslint/explicit-module-boundary-types': 'off',
-    '@typescript-eslint/no-explicit-any': 'warn',
-    '@typescript-eslint/no-var-requires': 'off', // Allow require() for Electron
-    '@typescript-eslint/no-require-imports': 'off', // Allow require() for Electron
-
     // General rules
-    'no-console': process.env.NODE_ENV === 'production' ? 'error' : 'warn',
+    'no-console': 'off',
     'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'warn',
-    'prefer-const': 'error',
-    'no-var': 'error',
-
-    // React specific rules (if using React)
-    'react/jsx-uses-react': 'off', // Not needed with new JSX transform
-    'react/react-in-jsx-scope': 'off', // Not needed with new JSX transform
+    'prefer-const': 'warn',
+    'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
   },
   settings: {
     react: {
@@ -48,12 +30,38 @@ module.exports = {
     }
   },
   overrides: [
+    // TypeScript files - use type-aware linting
+    {
+      files: ['*.ts', '*.tsx'],
+      parser: '@typescript-eslint/parser',
+      parserOptions: {
+        ecmaVersion: 12,
+        sourceType: 'module',
+        project: './tsconfig.json',
+        tsconfigRootDir: __dirname,
+        ecmaFeatures: {
+          jsx: true
+        }
+      },
+      extends: [
+        'plugin:@typescript-eslint/recommended',
+      ],
+      plugins: ['@typescript-eslint'],
+      rules: {
+        '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+        '@typescript-eslint/explicit-function-return-type': 'off',
+        '@typescript-eslint/explicit-module-boundary-types': 'off',
+        '@typescript-eslint/no-explicit-any': 'warn',
+        '@typescript-eslint/no-var-requires': 'off',
+        '@typescript-eslint/no-require-imports': 'off',
+        'no-unused-vars': 'off', // Use TS version instead
+      }
+    },
+    // Legacy JS files - simpler rules
     {
       files: ['*.js', '*.jsx'],
       rules: {
-        '@typescript-eslint/explicit-function-return-type': 'off',
-        '@typescript-eslint/no-var-requires': 'off',
-        '@typescript-eslint/no-require-imports': 'off'
+        'no-var': 'off', // Legacy code uses var
       }
     },
     {
@@ -61,10 +69,6 @@ module.exports = {
       env: {
         node: true,
         browser: false
-      },
-      rules: {
-        '@typescript-eslint/no-var-requires': 'off',
-        '@typescript-eslint/no-require-imports': 'off'
       }
     },
   ]

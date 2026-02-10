@@ -1,109 +1,127 @@
-# Modernization Plan: translationStudio Desktop
+# translationStudio Desktop Modernization Plan
 
-## Vision
-Bring translationStudio Desktop to a maintainable, secure, and performant Electron + React + TypeScript application while preserving existing user workflows across macOS, Windows, and Linux.
+Last updated: 2026-02-10
 
----
+## Objective
 
-## Phase 0 – Baseline Snapshot ✅
-- **Electron shell runs** on current tooling (Webpack bundle, legacy preload) and renders new React dashboard.
-- **TypeScript + React scaffold** exists in `src/` with context/state helpers.
-- **Webpack build** produces `dist/js/bundle.js`; legacy Polymer bundle still ships inside `dist/`.
-- **Testing/QA status**: Jest wiring exists but suites are stale; no automated end-to-end coverage.
+Deliver a modern Electron + React + TypeScript desktop app that behaves the same as legacy translationStudio across macOS, Windows, and Linux.
 
-> Status: Completed. We can launch the app after splash and verify the new dashboard renders.
+## Current Verified State
 
----
+- `npm run build:dev` passes.
+- `npm run build` passes.
+- `npm run type-check` passes.
+- `npm run start:safe` launches the app on macOS and reaches the main window.
+- The React app now receives `window.electronAPI` during launch.
+- New project resource listing is wired to cached resource containers in user data.
 
-## Phase 1 – Foundation Hardening (in progress)
-Goal: Stabilize the developer experience, ensure repeatable builds, and reintroduce core Electron security patterns.
+Open risks still present:
 
-1. **TypeScript & Build Health**
-   - ✅ `tsconfig.json` and webpack-based pipeline in place.
-   - ✅ Local `npm run build:dev` and `npm run type-check` succeed (2025‑09‑17).
-   - ✅ CI workflow (`.github/workflows/ci.yml`) runs type-check, lint, and build on pushes/PRs.
-2. **Coding Standards & Tooling**
-   - ✅ ESLint/Prettier configs exist; integrate with npm scripts.
-   - ✅ Lightweight git hook (`scripts/install-hooks.js`) enforces type-check + build before commit.
-3. **Electron Security Pass**
-   - ⚠️ `nodeIntegration` temporarily enabled; plan to restore `contextIsolation` + secure preload once React migration is complete.
-   - ✅ Documented current IPC surface and Node dependency audit (`docs/electron-security-audit.md`).
-   - ✅ Replaced `window.electronAPI` usage with typed IPC helpers; documented remaining Node builtins (`docs/webpack-node-audit.md`).
-4. **Build Artifacts & Packaging**
-   - 🔁 Defer removal of legacy `bower/gulp` tooling to Phase 3 when feature parity is closer.
-   - 🔁 Evaluate packaging upgrade (electron-packager → electron-builder) during Phase 5 deployment work.
+- CI lint is non-blocking (`npm run lint || true`).
+- Security posture is intentionally permissive (`nodeIntegration: true`, `contextIsolation: false`) while migration continues.
+- Feature parity is not yet proven with a formal workflow checklist.
+- Dependency risk remains high (legacy packages and known audit findings).
 
-> Status: Active. Next actionable: keep foundation green by restoring the missing `HomeScreen` component so webpack builds succeed, then enable continuous type-check/lint runs.
+## Execution Strategy (Optimal Order)
 
----
+This is a gate-based plan. We do not advance to the next gate until the current gate exit criteria are met.
 
-## Phase 2 – UI Migration to React ✅
-Goal: Replace Polymer/custom elements with React + MUI counterparts while maintaining functionality.
+### Gate 0: Stabilize Build and Runtime (In Progress)
 
-1. **Component Inventory**
-   - ✅ `component-inventory.md` kept current with Polymer → React mapping and status.
-2. **Navigation & Shell**
-   - ✅ React `Dashboard` now includes sidebar navigation (`Sidebar.tsx`) and status reporting.
-3. **Screen Conversion**
-   - ✅ Home, New Project, Translation, Review, Settings, Profile, Print, Updates, and Terms screens migrated to React components.
-4. **State & Data Flow**
-   - ✅ Route transitions update global screen context; project/recent helpers integrated with new screens.
-5. **Styling & Theming**
-   - ✅ Core layout uses MUI components; remaining legacy CSS earmarked for future polish.
+Goal: Keep local development and CI trustworthy.
 
----
+Completed:
 
-## Phase 3 – Services & Data Modernization
-Goal: Type-safe access to filesystem, databases, and integrations.
+- [x] Resolve AJV/webpack dependency conflict.
+- [x] Restore missing TypeScript service modules for import/export interfaces.
+- [x] Fix renderer startup blockers (`sql.js` compatibility, preload behavior, screen update loop).
+- [x] Align new repository DB path with legacy data location (`library/index.sqlite`).
 
-1. **IPC & Preload APIs**
-   - ⬜ Define typed interfaces for dialog, filesystem, network requests.
-   - ⬜ Move ad-hoc `require('electron')` usage to preload bridges; re-enable `contextIsolation`.
-2. **Database Layer**
-   - ⬜ Finish TypeScript wrappers for `sql.js` (currently partial in `utils/database.ts`).
-   - ⬜ Migrate migration scripts and ensure schema versioning.
-3. **Import/Export & Git**
-   - ⬜ Port exporter/importer/Git logic to TypeScript modules, surface via hooks/services.
-4. **Resource Packaging**
-   - ⬜ Replace manual `door43-client` scripts with typed task runners.
+Exit criteria:
 
----
+- [ ] CI enforces lint (remove `|| true`).
+- [ ] CI runs `type-check`, `lint`, and `build:dev` as hard blockers.
+- [ ] Basic startup smoke test is scriptable and repeatable.
 
-## Phase 4 – Quality & Automation
-Goal: Confidence through automated validation.
+### Gate 1: macOS Feature Parity (Highest Priority)
 
-1. **Unit & Integration Tests**
-   - ⬜ Update Jest config for React 18 + TS; add React Testing Library coverage for critical components.
-2. **End-to-End Tests**
-   - ⬜ Evaluate Playwright or Spectron successor (e.g., `@playwright/test` + Electron).
-3. **Static Analysis**
-   - ⬜ Hook ESLint, Prettier, and TypeScript into CI.
-4. **Performance Budgets**
-   - ⬜ Track bundle size, startup time, and memory usage across platforms.
+Goal: Match legacy behavior on macOS before platform expansion.
 
----
+Scope:
 
-## Phase 5 – Release & Distribution
-Goal: Ship a production-ready multi-platform build.
+- Project lifecycle: create, open, recent list, delete.
+- Import/export: USFM and backup flows.
+- Translation and review workflows.
+- Print/export screen behavior.
+- Settings/profile/updates/legal workflows.
+- Academy window behavior.
 
-1. **Packaging & Updates**
-   - ⬜ Adopt `electron-builder` or maintain `electron-packager` scripts with signing/notarization steps.
-   - ⬜ Integrate auto-update (Squirrel, Electron-updater, or custom).
-2. **Release Automation**
-   - ⬜ GitHub Actions workflow for lint/test/build/package on tags.
-3. **Documentation**
-   - ⬜ Update README, contributor guide, migration docs, and release notes templates.
+Exit criteria:
 
----
+- [ ] Parity checklist exists and is versioned in repo.
+- [ ] Each macOS workflow marked Pass/Fail with notes.
+- [ ] No P0/P1 functional regressions against legacy behavior.
 
-## Current Position
-- **Phase**: Early **Phase 1 – Foundation Hardening**.
-- **Immediate focus**: Keep TypeScript/Webpack builds passing, then tighten Electron security posture once React migration reduces direct Node dependencies.
+### Gate 2: Security Hardening
 
-## Next Action Checklist
-1. ✅ Recreate missing `HomeScreen.tsx` so webpack builds pass again.
-2. ✅ Run `npm run build:dev` / `npm run type-check`; tracked fixes for `usfm-js` typings.
-3. ✅ Audit referenced screens (`Home`, `NewProject`, `Translation`, `Settings`) and confirm exports.
-4. ✅ Document security debt (see `docs/electron-security-audit.md`) and schedule mitigation in Phase 3 backlog.
-5. ✅ Finish migrating React utilities to the typed IPC wrapper (dialog/files now consume it; remaining helpers validated).
-6. ✅ Evaluate remaining webpack externals that force Node builtins and plan shims (`docs/webpack-node-audit.md`).
+Goal: Move to modern Electron safety defaults without breaking parity.
+
+Scope:
+
+- Remove generic renderer `require` bridge.
+- Ensure renderer code uses typed IPC only.
+- Eliminate runtime renderer dependence on Node builtins.
+- Flip browser window settings to:
+  - `nodeIntegration: false`
+  - `contextIsolation: true`
+  - `sandbox: true`
+
+Exit criteria:
+
+- [ ] App runs with secure defaults in dev mode.
+- [ ] Startup, import/export, and translation flows still pass parity checks.
+- [ ] Bundle guard exists to detect Node builtin reintroduction in renderer.
+
+### Gate 3: Cross-Platform Validation (Windows + Linux)
+
+Goal: Validate parity and stability outside macOS.
+
+Scope:
+
+- Expand CI matrix to `ubuntu-latest`, `macos-latest`, `windows-latest`.
+- Add smoke flows per OS for app launch, open/save/import/export.
+
+Exit criteria:
+
+- [ ] CI matrix green on all three OSes.
+- [ ] Workflow parity checklist includes Windows and Linux statuses.
+
+### Gate 4: Release and Distribution
+
+Goal: Produce production-ready artifacts and release flow.
+
+Scope:
+
+- Packaging strategy finalization (`electron-builder` vs retained flow).
+- Signing/notarization implementation per platform.
+- Release automation and artifact publication.
+- Upgrade and migration documentation.
+
+Exit criteria:
+
+- [ ] Signed installers produced in CI.
+- [ ] Release checklist is repeatable.
+- [ ] Upgrade path from legacy builds documented and tested.
+
+## Immediate Next Work (Recommended)
+
+1. Make CI truthful by enforcing lint failures.
+2. Create a concrete parity checklist from legacy workflows and support docs.
+3. Validate and close obvious import/export functional gaps behind the new service layer.
+4. Add initial macOS smoke script to automate launch and core navigation checks.
+
+## Decision Log
+
+- 2026-02-10: Prioritized gate-based execution over phase-only progression to avoid advancing with hidden regressions.
+- 2026-02-10: Kept security hardening after parity proof to reduce risk of simultaneous behavioral and platform breakage.
+- 2026-02-10: Chose macOS-first parity validation before cross-platform expansion, per requested testing order.

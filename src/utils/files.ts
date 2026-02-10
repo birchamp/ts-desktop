@@ -2,6 +2,10 @@ import { getBridge, invoke } from './ipc';
 
 export async function getUserDataPath(): Promise<string | null> {
   try {
+    const bridge = getBridge();
+    if (bridge?.app) {
+      return await bridge.app.getUserDataPath();
+    }
     return await invoke<string | null>('app:getUserDataPath');
   } catch {
     return null;
@@ -10,6 +14,10 @@ export async function getUserDataPath(): Promise<string | null> {
 
 export async function ensureDir(relPath: string): Promise<boolean> {
   try {
+    const bridge = getBridge();
+    if (bridge?.fs) {
+      return await bridge.fs.ensureDir(relPath);
+    }
     return await invoke<boolean>('fs:ensureDir', relPath);
   } catch {
     return false;
@@ -18,7 +26,13 @@ export async function ensureDir(relPath: string): Promise<boolean> {
 
 export async function readJson<T = any>(relPath: string, defaultValue?: T): Promise<T | null> {
   try {
-    const data = await invoke<T | null>('fs:readJson', relPath);
+    const bridge = getBridge();
+    let data: T | null = null;
+    if (bridge?.fs) {
+      data = await bridge.fs.readJson<T>(relPath);
+    } else {
+      data = await invoke<T | null>('fs:readJson', relPath);
+    }
     if (data == null) return defaultValue ?? null;
     return data;
   } catch {
@@ -28,6 +42,10 @@ export async function readJson<T = any>(relPath: string, defaultValue?: T): Prom
 
 export async function writeJson(relPath: string, data: any): Promise<boolean> {
   try {
+    const bridge = getBridge();
+    if (bridge?.fs) {
+      return await bridge.fs.writeJson(relPath, data);
+    }
     return await invoke<boolean>('fs:writeJson', { relPath, data });
   } catch {
     return false;
@@ -36,9 +54,17 @@ export async function writeJson(relPath: string, data: any): Promise<boolean> {
 
 export async function readFile(relPath: string): Promise<Uint8Array | null> {
   try {
-    const buf: any = await invoke<any>('fs:readFile', relPath);
+    const bridge = getBridge();
+    let buf: any;
+    if (bridge?.fs) {
+      buf = await bridge.fs.readFile(relPath);
+    } else {
+      buf = await invoke<any>('fs:readFile', relPath);
+    }
     if (!buf) return null;
-    return new Uint8Array(buf.data ?? buf);
+    if (buf instanceof Uint8Array) return buf;
+    if (buf.data && Array.isArray(buf.data)) return new Uint8Array(buf.data);
+    return new Uint8Array(buf);
   } catch {
     return null;
   }
@@ -46,6 +72,10 @@ export async function readFile(relPath: string): Promise<Uint8Array | null> {
 
 export async function writeFile(relPath: string, data: Uint8Array): Promise<boolean> {
   try {
+    const bridge = getBridge();
+    if (bridge?.fs) {
+      return await bridge.fs.writeFile(relPath, data);
+    }
     return await invoke<boolean>('fs:writeFile', { relPath, data });
   } catch {
     return false;
@@ -59,6 +89,10 @@ export async function writeText(relPath: string, text: string): Promise<boolean>
 
 export async function readAbsoluteText(absPath: string): Promise<string | null> {
   try {
+    const bridge = getBridge();
+    if (bridge?.fs) {
+      return await bridge.fs.readAbsoluteText(absPath);
+    }
     return await invoke<string | null>('fs:readAbsoluteText', absPath);
   } catch {
     return null;
@@ -67,6 +101,10 @@ export async function readAbsoluteText(absPath: string): Promise<string | null> 
 
 export async function copyAbsoluteToUserData(relPath: string, absPath: string): Promise<boolean> {
   try {
+    const bridge = getBridge();
+    if (bridge?.fs) {
+      return await bridge.fs.copyAbsoluteToUserData(relPath, absPath);
+    }
     return await invoke<boolean>('fs:copyAbsoluteToUserData', { relPath, absPath });
   } catch {
     return false;
@@ -75,21 +113,48 @@ export async function copyAbsoluteToUserData(relPath: string, absPath: string): 
 
 export function minimizeWindow(): boolean {
   const bridge = getBridge();
-  if (!bridge?.minimizeWindow) return false;
-  bridge.minimizeWindow();
-  return true;
+  if (bridge?.window) {
+    bridge.window.minimize();
+    return true;
+  }
+  try {
+    const ipc = (window as any)?.require?.('electron')?.ipcRenderer;
+    if (!ipc) return false;
+    ipc.send('main-window', 'minimize');
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function maximizeWindow(): boolean {
   const bridge = getBridge();
-  if (!bridge?.maximizeWindow) return false;
-  bridge.maximizeWindow();
-  return true;
+  if (bridge?.window) {
+    bridge.window.maximize();
+    return true;
+  }
+  try {
+    const ipc = (window as any)?.require?.('electron')?.ipcRenderer;
+    if (!ipc) return false;
+    ipc.send('main-window', 'maximize');
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function closeWindow(): boolean {
   const bridge = getBridge();
-  if (!bridge?.closeWindow) return false;
-  bridge.closeWindow();
-  return true;
+  if (bridge?.window) {
+    bridge.window.close();
+    return true;
+  }
+  try {
+    const ipc = (window as any)?.require?.('electron')?.ipcRenderer;
+    if (!ipc) return false;
+    ipc.send('main-window', 'close');
+    return true;
+  } catch {
+    return false;
+  }
 }

@@ -1,4 +1,6 @@
 import { createRoot } from 'react-dom/client';
+import { version as reactVersion } from 'react';
+import { version as reactDomVersion } from 'react-dom';
 import App from './App';
 import DevErrorBoundary from './components/DevErrorBoundary';
 import { send } from './utils/ipc';
@@ -11,15 +13,11 @@ if (!container) {
 
 console.log('[renderer] Mounting React app');
 try {
+  console.log('[renderer] electronAPI available:', typeof (window as any).electronAPI);
   // Log React/ReactDOM versions to main log for diagnostics
   try {
-    const w: any = window as any;
-    if (w && typeof w.require === 'function') {
-      const rv = w.require('react').version;
-      const rdv = w.require('react-dom').version;
-      console.log(`[renderer] React ${rv}, ReactDOM ${rdv}`);
-      send('loading-status', `react-versions ${rv}/${rdv}`);
-    }
+    console.log(`[renderer] React ${reactVersion}, ReactDOM ${reactDomVersion}`);
+    send('loading-status', `react-versions ${reactVersion}/${reactDomVersion}`);
   } catch {}
 
   const root = createRoot(container);
@@ -31,14 +29,10 @@ try {
 } catch (e) {
   console.error('[renderer] React render failed:', e);
   try {
-    const w: any = window as any;
-    if (w && typeof w.require === 'function') {
-      const { ipcRenderer } = w.require('electron');
-      ipcRenderer && ipcRenderer.send('renderer-error', {
-        message: e && (e as any).message,
-        stack: e && (e as any).stack,
-      });
-    }
+    send('renderer-error', {
+      message: e && (e as any).message,
+      stack: e && (e as any).stack,
+    });
   } catch {}
   // crude fallback to display something
   const el = document.createElement('pre');

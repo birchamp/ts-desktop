@@ -29,7 +29,8 @@ const TitleBar: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         padding: '0 16px',
-      } as any}
+      }}
+      className="drag-region"
     >
       <Typography
         variant="h6"
@@ -44,14 +45,14 @@ const TitleBar: React.FC = () => {
         translationStudio
       </Typography>
 
-      <Box style={{ display: 'flex', gap: '4px' }}>
+      <Box style={{ display: 'flex', gap: '4px' }} className="no-drag">
         <IconButton
           size="small"
           onClick={handleMinimize}
           style={{
             color: 'white',
             padding: '4px',
-          } as any}
+          }}
         >
           <Minimize fontSize="small" />
         </IconButton>
@@ -62,7 +63,7 @@ const TitleBar: React.FC = () => {
           style={{
             color: 'white',
             padding: '4px',
-          } as any}
+          }}
         >
           <Maximize fontSize="small" />
         </IconButton>
@@ -73,7 +74,7 @@ const TitleBar: React.FC = () => {
           style={{
             color: 'white',
             padding: '4px',
-          } as any}
+          }}
         >
           <Close fontSize="small" />
         </IconButton>

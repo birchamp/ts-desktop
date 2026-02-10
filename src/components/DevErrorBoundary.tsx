@@ -1,4 +1,5 @@
 import React from 'react';
+import { send } from '../utils/ipc';
 
 type Props = { children: React.ReactNode };
 type State = { hasError: boolean; message?: string };
@@ -9,16 +10,12 @@ export default class DevErrorBoundary extends React.Component<Props, State> {
   componentDidCatch(error: any, info: any) {
     this.setState({ hasError: true, message: String(error && error.message || error) });
     try {
-      const w: any = window as any;
-      if (w && typeof w.require === 'function') {
-        const { ipcRenderer } = w.require('electron');
-        ipcRenderer && ipcRenderer.send('renderer-error', {
-          boundary: true,
-          message: error && error.message,
-          stack: error && error.stack,
-          info,
-        });
-      }
+      send('renderer-error', {
+        boundary: true,
+        message: error && error.message,
+        stack: error && error.stack,
+        info,
+      });
     } catch {}
     // Also surface in console for visibility
     // eslint-disable-next-line no-console
@@ -37,4 +34,3 @@ export default class DevErrorBoundary extends React.Component<Props, State> {
     return this.props.children as any;
   }
 }
-
