@@ -30,11 +30,11 @@ const TitleBar: React.FC = () => {
         alignItems: 'center',
         padding: '0 16px',
       }}
-      className="drag-region"
+      className='drag-region'
     >
       <Typography
-        variant="h6"
-        component="div"
+        variant='h6'
+        component='div'
         style={{
           flexGrow: 1,
           fontSize: '14px',
@@ -45,38 +45,38 @@ const TitleBar: React.FC = () => {
         translationStudio
       </Typography>
 
-      <Box style={{ display: 'flex', gap: '4px' }} className="no-drag">
+      <Box style={{ display: 'flex', gap: '4px' }} className='no-drag'>
         <IconButton
-          size="small"
+          size='small'
           onClick={handleMinimize}
           style={{
             color: 'white',
             padding: '4px',
           }}
         >
-          <Minimize fontSize="small" />
+          <Minimize fontSize='small' />
         </IconButton>
 
         <IconButton
-          size="small"
+          size='small'
           onClick={handleMaximize}
           style={{
             color: 'white',
             padding: '4px',
           }}
         >
-          <Maximize fontSize="small" />
+          <Maximize fontSize='small' />
         </IconButton>
 
         <IconButton
-          size="small"
+          size='small'
           onClick={handleClose}
           style={{
             color: 'white',
             padding: '4px',
           }}
         >
-          <Close fontSize="small" />
+          <Close fontSize='small' />
         </IconButton>
       </Box>
     </div>

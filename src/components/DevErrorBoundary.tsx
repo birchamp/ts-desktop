@@ -8,7 +8,7 @@ export default class DevErrorBoundary extends React.Component<Props, State> {
   state: State = { hasError: false };
 
   componentDidCatch(error: any, info: any) {
-    this.setState({ hasError: true, message: String(error && error.message || error) });
+    this.setState({ hasError: true, message: String((error && error.message) || error) });
     try {
       send('renderer-error', {
         boundary: true,
@@ -16,7 +16,9 @@ export default class DevErrorBoundary extends React.Component<Props, State> {
         stack: error && error.stack,
         info,
       });
-    } catch {}
+    } catch {
+      // no-op: avoid crashing while reporting renderer errors
+    }
     // Also surface in console for visibility
     // eslint-disable-next-line no-console
     console.error('[renderer] ErrorBoundary caught:', error, info);

@@ -20,14 +20,49 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Home', path: '/home', description: 'Overview of projects', icon: <HomeIcon /> },
-  { label: 'New Project', path: '/new', description: 'Create translation projects', icon: <AddCircleIcon /> },
-  { label: 'Translate', path: '/translate', description: 'Work on translations', icon: <TranslateIcon /> },
-  { label: 'Review', path: '/review', description: 'Quality checks and feedback', icon: <RateReviewIcon /> },
-  { label: 'Settings', path: '/settings', description: 'Application preferences', icon: <SettingsIcon /> },
+  {
+    label: 'New Project',
+    path: '/new',
+    description: 'Create translation projects',
+    icon: <AddCircleIcon />,
+  },
+  {
+    label: 'Translate',
+    path: '/translate',
+    description: 'Work on translations',
+    icon: <TranslateIcon />,
+  },
+  {
+    label: 'Review',
+    path: '/review',
+    description: 'Quality checks and feedback',
+    icon: <RateReviewIcon />,
+  },
+  {
+    label: 'Settings',
+    path: '/settings',
+    description: 'Application preferences',
+    icon: <SettingsIcon />,
+  },
   { label: 'Profile', path: '/profile', description: 'Account information', icon: <PersonIcon /> },
-  { label: 'Print', path: '/print', description: 'Export and print resources', icon: <PrintIcon /> },
-  { label: 'Updates', path: '/updates', description: 'Resource and app updates', icon: <UpdateIcon /> },
-  { label: 'Terms', path: '/terms', description: 'Legal and license details', icon: <ArticleIcon /> },
+  {
+    label: 'Print',
+    path: '/print',
+    description: 'Export and print resources',
+    icon: <PrintIcon />,
+  },
+  {
+    label: 'Updates',
+    path: '/updates',
+    description: 'Resource and app updates',
+    icon: <UpdateIcon />,
+  },
+  {
+    label: 'Terms',
+    path: '/terms',
+    description: 'Legal and license details',
+    icon: <ArticleIcon />,
+  },
 ];
 
 const Sidebar: React.FC = () => {
@@ -36,7 +71,7 @@ const Sidebar: React.FC = () => {
 
   return (
     <Box
-      component="nav"
+      component='nav'
       sx={{
         width: 220,
         minWidth: 220,
@@ -49,7 +84,7 @@ const Sidebar: React.FC = () => {
         {NAV_ITEMS.map(item => {
           const selected = location.pathname === item.path;
           return (
-            <Tooltip key={item.path} title={item.description} placement="right" arrow>
+            <Tooltip key={item.path} title={item.description} placement='right' arrow>
               <ListItemButton
                 selected={selected}
                 onClick={() => navigate(item.path)}

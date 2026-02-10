@@ -1,5 +1,14 @@
 import React from 'react';
-import { Box, Button, FormControlLabel, MenuItem, Select, Switch, TextField, Typography } from '@mui/material';
+import {
+  Box,
+  Button,
+  FormControlLabel,
+  MenuItem,
+  Select,
+  Switch,
+  TextField,
+  Typography,
+} from '@mui/material';
 import { useApp } from '../../contexts/AppContext';
 import { readJson, writeJson } from '../../utils/files';
 
@@ -20,7 +29,6 @@ const SettingsScreen: React.FC = () => {
         if (typeof disk.autoSave === 'boolean') setAutoSave(disk.autoSave);
       }
     })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSave = async () => {
@@ -30,37 +38,37 @@ const SettingsScreen: React.FC = () => {
   };
 
   return (
-    <Box p={3} display="flex" flexDirection="column" style={{ gap: 16 }}>
-      <Typography variant="h5">Settings</Typography>
+    <Box p={3} display='flex' flexDirection='column' style={{ gap: 16 }}>
+      <Typography variant='h5'>Settings</Typography>
 
-      <Box display="flex" style={{ gap: 24 }}>
-        <Box display="flex" flexDirection="column" style={{ gap: 12, minWidth: 280 }}>
-          <Typography variant="subtitle1">Language</Typography>
-          <Select value={language} onChange={(e) => setLanguage(e.target.value as string)}>
-            <MenuItem value="en">English</MenuItem>
-            <MenuItem value="es-419">Spanish (LATAM)</MenuItem>
-            <MenuItem value="fr">French</MenuItem>
+      <Box display='flex' style={{ gap: 24 }}>
+        <Box display='flex' flexDirection='column' style={{ gap: 12, minWidth: 280 }}>
+          <Typography variant='subtitle1'>Language</Typography>
+          <Select value={language} onChange={e => setLanguage(e.target.value as string)}>
+            <MenuItem value='en'>English</MenuItem>
+            <MenuItem value='es-419'>Spanish (LATAM)</MenuItem>
+            <MenuItem value='fr'>French</MenuItem>
           </Select>
         </Box>
 
-        <Box display="flex" flexDirection="column" style={{ gap: 12, minWidth: 280 }}>
-          <Typography variant="subtitle1">Font Size</Typography>
+        <Box display='flex' flexDirection='column' style={{ gap: 12, minWidth: 280 }}>
+          <Typography variant='subtitle1'>Font Size</Typography>
           <TextField
-            type="number"
+            type='number'
             inputProps={{ min: 10, max: 24 }}
             value={fontSize}
-            onChange={(e) => setFontSize(Number(e.target.value))}
+            onChange={e => setFontSize(Number(e.target.value))}
           />
         </Box>
       </Box>
 
       <FormControlLabel
-        control={<Switch checked={autoSave} onChange={(e) => setAutoSave(e.target.checked)} />}
-        label="Auto Save"
+        control={<Switch checked={autoSave} onChange={e => setAutoSave(e.target.checked)} />}
+        label='Auto Save'
       />
 
       <Box>
-        <Button color="primary" variant="contained" onClick={handleSave}>
+        <Button color='primary' variant='contained' onClick={handleSave}>
           Save Settings
         </Button>
       </Box>

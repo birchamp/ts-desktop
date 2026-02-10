@@ -55,7 +55,9 @@ const HomeScreen: React.FC = () => {
   };
 
   const handleImportProject = async () => {
-    const res = await openFile([{ name: 'USFM or Project Archive', extensions: ['usfm', 'zip', 'tsproj'] }]);
+    const res = await openFile([
+      { name: 'USFM or Project Archive', extensions: ['usfm', 'zip', 'tsproj'] },
+    ]);
     if (res.canceled || !res.filePaths.length) return;
     const filePath = res.filePaths[0];
     if (/\.usfm$/i.test(filePath)) {
@@ -103,12 +105,12 @@ const HomeScreen: React.FC = () => {
           justifyContent: 'space-between',
         }}
       >
-        <Typography variant="h5" component="h1">
+        <Typography variant='h5' component='h1'>
           translationStudio
         </Typography>
         <Box>
           <Button
-            variant="contained"
+            variant='contained'
             onClick={handleNewProject}
             style={{
               backgroundColor: 'white',
@@ -120,7 +122,7 @@ const HomeScreen: React.FC = () => {
             New Project
           </Button>
           <Button
-            variant="outlined"
+            variant='outlined'
             onClick={handleImportProject}
             style={{
               borderColor: 'white',
@@ -137,15 +139,15 @@ const HomeScreen: React.FC = () => {
         {/* Welcome Card */}
         <Card style={{ maxWidth: 600, marginBottom: '30px', alignSelf: 'center' }}>
           <CardContent style={{ textAlign: 'center', padding: '30px' }}>
-            <Typography variant="h6" gutterBottom>
+            <Typography variant='h6' gutterBottom>
               Welcome to translationStudio
             </Typography>
-            <Typography variant="body2" color="textSecondary" style={{ marginBottom: '20px' }}>
+            <Typography variant='body2' color='textSecondary' style={{ marginBottom: '20px' }}>
               Create a new project or continue working on an existing one to start translating.
             </Typography>
             <Button
-              variant="contained"
-              size="large"
+              variant='contained'
+              size='large'
               onClick={handleNewProject}
               style={{ minWidth: '150px' }}
             >
@@ -157,19 +159,19 @@ const HomeScreen: React.FC = () => {
         {/* Recent Projects */}
         {recents.length > 0 && (
           <Box style={{ maxWidth: 800, alignSelf: 'center', width: '100%', marginBottom: '24px' }}>
-            <Typography variant="h6" gutterBottom style={{ marginBottom: '12px' }}>
+            <Typography variant='h6' gutterBottom style={{ marginBottom: '12px' }}>
               Recent Projects
             </Typography>
             <Card>
               <List dense>
-                {recents.map((r) => (
+                {recents.map(r => (
                   <ListItem key={r.id} divider button onClick={() => handleOpenProject(r.id)}>
                     <ListItemText
                       primary={r.name}
                       secondary={`${r.language} • ${new Date(r.lastOpened).toLocaleString()}`}
                     />
                     <ListItemSecondaryAction>
-                      <IconButton edge="end" onClick={() => handleOpenProject(r.id)}>
+                      <IconButton edge='end' onClick={() => handleOpenProject(r.id)}>
                         <PlayArrow />
                       </IconButton>
                     </ListItemSecondaryAction>
@@ -183,36 +185,41 @@ const HomeScreen: React.FC = () => {
         {/* Projects List */}
         {(dbProjects.length > 0 || state.projects.length > 0) && (
           <Box style={{ maxWidth: 800, alignSelf: 'center', width: '100%' }}>
-            <Typography variant="h6" gutterBottom style={{ marginBottom: '20px' }}>
+            <Typography variant='h6' gutterBottom style={{ marginBottom: '20px' }}>
               Your Projects
             </Typography>
 
             <Card>
               <List>
-                {(dbProjects.length > 0 ? dbProjects : state.projects).map((project) => (
+                {(dbProjects.length > 0 ? dbProjects : state.projects).map(project => (
                   <ListItem key={project.id} divider>
                     <ListItemText
                       primary={
                         <Box style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <Typography variant="subtitle1">{project.name}</Typography>
+                          <Typography variant='subtitle1'>{project.name}</Typography>
                           <Chip
                             label={`${project.progress ?? 0}%`}
-                            size="small"
+                            size='small'
                             color={(project.progress ?? 0) === 100 ? 'primary' : 'default'}
                           />
                         </Box>
                       }
                       secondary={
-                        <Typography variant="body2" color="textSecondary">
-                          {project.language} • Last modified: {new Date(project.lastModified ?? Date.now()).toLocaleDateString()}
+                        <Typography variant='body2' color='textSecondary'>
+                          {project.language} • Last modified:{' '}
+                          {new Date(project.lastModified ?? Date.now()).toLocaleDateString()}
                         </Typography>
                       }
                     />
                     <ListItemSecondaryAction>
-                      <IconButton edge="end" onClick={() => handleOpenProject(project.id)} style={{ marginRight: 8 }}>
+                      <IconButton
+                        edge='end'
+                        onClick={() => handleOpenProject(project.id)}
+                        style={{ marginRight: 8 }}
+                      >
                         <PlayArrow />
                       </IconButton>
-                      <IconButton edge="end" onClick={() => handleDeleteProject(project.id)}>
+                      <IconButton edge='end' onClick={() => handleDeleteProject(project.id)}>
                         <Delete />
                       </IconButton>
                     </ListItemSecondaryAction>
@@ -226,10 +233,10 @@ const HomeScreen: React.FC = () => {
         {/* Empty State */}
         {state.projects.length === 0 && dbProjects.length === 0 && (
           <Box style={{ textAlign: 'center', marginTop: '50px' }}>
-            <Typography variant="h6" color="textSecondary" gutterBottom>
+            <Typography variant='h6' color='textSecondary' gutterBottom>
               No projects yet
             </Typography>
-            <Typography variant="body2" color="textSecondary">
+            <Typography variant='body2' color='textSecondary'>
               Create your first translation project to get started.
             </Typography>
           </Box>

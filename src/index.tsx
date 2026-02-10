@@ -18,7 +18,9 @@ try {
   try {
     console.log(`[renderer] React ${reactVersion}, ReactDOM ${reactDomVersion}`);
     send('loading-status', `react-versions ${reactVersion}/${reactDomVersion}`);
-  } catch {}
+  } catch {
+    // no-op: diagnostics should never break render
+  }
 
   const root = createRoot(container);
   root.render(
@@ -33,7 +35,9 @@ try {
       message: e && (e as any).message,
       stack: e && (e as any).stack,
     });
-  } catch {}
+  } catch {
+    // no-op: avoid recursive failure while reporting renderer errors
+  }
   // crude fallback to display something
   const el = document.createElement('pre');
   el.textContent = '[renderer] React render failed: ' + String((e && (e as any).message) || e);
@@ -47,7 +51,9 @@ function notifyMainLoaded() {
     console.log('[renderer] Sending main-loading-done');
     if (send('main-loading-done')) return;
     send('loading-status', 'renderer-mounted');
-  } catch {}
+  } catch {
+    // no-op: fallback timer below still retries
+  }
 }
 
 // Try immediately after first render and once more after a short delay
@@ -56,7 +62,7 @@ setTimeout(notifyMainLoaded, 500);
 
 // Report runtime errors to main for logging
 try {
-  window.addEventListener('error', (e) => {
+  window.addEventListener('error', e => {
     send('renderer-error', {
       message: e.message,
       filename: e.filename,
@@ -72,4 +78,6 @@ try {
       stack: (e as any).reason && (e as any).reason.stack,
     });
   });
-} catch {}
+} catch {
+  // no-op: browser env may block global error hooks in edge cases
+}

@@ -72,7 +72,11 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ open, onClose, projectId })
   const [exportFormat, setExportFormat] = useState<ExportFormat>('usfm');
   const [exporting, setExporting] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [result, setResult] = useState<{ success: boolean; filename?: string; error?: string } | null>(null);
+  const [result, setResult] = useState<{
+    success: boolean;
+    filename?: string;
+    error?: string;
+  } | null>(null);
 
   // Load projects on open
   useEffect(() => {
@@ -160,8 +164,8 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ open, onClose, projectId })
           exportFormat === 'usfm'
             ? { name: 'USFM Files', extensions: ['usfm'] }
             : exportFormat === 'markdown'
-            ? { name: 'Markdown Files', extensions: ['md'] }
-            : { name: 'Project Backup', extensions: ['tstudio'] },
+              ? { name: 'Markdown Files', extensions: ['md'] }
+              : { name: 'Project Backup', extensions: ['tstudio'] },
         ],
       });
 
@@ -170,7 +174,7 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ open, onClose, projectId })
         const encoder = new TextEncoder();
         const data = encoder.encode(content);
         await window.electronAPI?.fs.writeFile(saveResult.filePath, data);
-        
+
         setProgress(100);
         setResult({
           success: true,
@@ -199,7 +203,7 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ open, onClose, projectId })
   }, [onClose]);
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth='sm' fullWidth>
       <DialogTitle>Export Project</DialogTitle>
       <DialogContent>
         {/* Project Selection */}
@@ -208,7 +212,7 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ open, onClose, projectId })
           <Select
             value={selectedProjectId}
             onChange={(e: SelectChangeEvent) => setSelectedProjectId(e.target.value)}
-            label="Project"
+            label='Project'
           >
             {projects.map(p => (
               <MenuItem key={p.id} value={p.id}>
@@ -219,12 +223,12 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ open, onClose, projectId })
         </FormControl>
 
         {/* Format Selection */}
-        <Typography variant="subtitle2" gutterBottom>
+        <Typography variant='subtitle2' gutterBottom>
           Export Format
         </Typography>
         <RadioGroup
           value={exportFormat}
-          onChange={(e) => setExportFormat(e.target.value as ExportFormat)}
+          onChange={e => setExportFormat(e.target.value as ExportFormat)}
         >
           {FORMAT_OPTIONS.map(opt => (
             <FormControlLabel
@@ -235,8 +239,8 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ open, onClose, projectId })
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   {opt.icon}
                   <Box>
-                    <Typography variant="body2">{opt.label}</Typography>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant='body2'>{opt.label}</Typography>
+                    <Typography variant='caption' color='text.secondary'>
                       {opt.description}
                     </Typography>
                   </Box>
@@ -252,10 +256,10 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ open, onClose, projectId })
         {/* Progress */}
         {exporting && (
           <Box sx={{ mb: 2 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            <Typography variant='body2' color='text.secondary' sx={{ mb: 1 }}>
               Exporting project...
             </Typography>
-            <LinearProgress variant="determinate" value={progress} />
+            <LinearProgress variant='determinate' value={progress} />
           </Box>
         )}
 
@@ -265,9 +269,7 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ open, onClose, projectId })
             severity={result.success ? 'success' : 'error'}
             icon={result.success ? <CheckCircle /> : <ErrorIcon />}
           >
-            {result.success
-              ? `Exported to ${result.filename}`
-              : result.error || 'Export failed.'}
+            {result.success ? `Exported to ${result.filename}` : result.error || 'Export failed.'}
           </Alert>
         )}
       </DialogContent>
@@ -277,8 +279,8 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ open, onClose, projectId })
         </Button>
         <Button
           onClick={handleExport}
-          color="primary"
-          variant="contained"
+          color='primary'
+          variant='contained'
           disabled={!selectedProjectId || exporting}
           startIcon={exporting ? <CircularProgress size={16} /> : <Download />}
         >

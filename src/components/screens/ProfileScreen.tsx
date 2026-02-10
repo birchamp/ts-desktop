@@ -16,24 +16,40 @@ const ProfileScreen: React.FC = () => {
   };
 
   return (
-    <Box p={3} display="flex" flexDirection="column" gap={3}>
-      <Typography variant="h5">Profile</Typography>
+    <Box p={3} display='flex' flexDirection='column' gap={3}>
+      <Typography variant='h5'>Profile</Typography>
 
       <Card sx={{ maxWidth: 480 }}>
         <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <Box display="flex" alignItems="center" gap={2}>
+          <Box display='flex' alignItems='center' gap={2}>
             <Avatar sx={{ width: 64, height: 64 }}>
               {(name || 'TS')[0]?.toUpperCase() ?? 'T'}
             </Avatar>
-            <Typography variant="subtitle1" color="text.secondary">
+            <Typography variant='subtitle1' color='text.secondary'>
               Manage your translationStudio account information.
             </Typography>
           </Box>
 
-          <TextField label="Full Name" value={name} onChange={e => setName(e.target.value)} fullWidth />
-          <TextField label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} fullWidth />
+          <TextField
+            label='Full Name'
+            value={name}
+            onChange={e => setName(e.target.value)}
+            fullWidth
+          />
+          <TextField
+            label='Email'
+            type='email'
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            fullWidth
+          />
 
-          <Button variant="contained" color="primary" onClick={handleSave} disabled={!name || !email}>
+          <Button
+            variant='contained'
+            color='primary'
+            onClick={handleSave}
+            disabled={!name || !email}
+          >
             Save Profile
           </Button>
         </CardContent>

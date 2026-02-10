@@ -27,13 +27,7 @@ import {
   SelectChangeEvent,
   Typography,
 } from '@mui/material';
-import {
-  Description,
-  CheckCircle,
-  Error as ErrorIcon,
-  Upload,
-  Folder,
-} from '@mui/icons-material';
+import { Description, CheckCircle, Error as ErrorIcon, Upload, Folder } from '@mui/icons-material';
 import React, { useState, useCallback } from 'react';
 import { ImportService, extractProjectIdFromUSFM } from '../../services/import/importer';
 import { projectRepository } from '../../services/projectRepository';
@@ -68,7 +62,11 @@ const ImportDialog: React.FC<ImportDialogProps> = ({ open, onClose, onImportComp
   const [targetLanguage, setTargetLanguage] = useState('en');
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [result, setResult] = useState<{ success: boolean; projectId?: string; error?: string } | null>(null);
+  const [result, setResult] = useState<{
+    success: boolean;
+    projectId?: string;
+    error?: string;
+  } | null>(null);
 
   const handleFileSelect = useCallback(async () => {
     try {
@@ -85,16 +83,16 @@ const ImportDialog: React.FC<ImportDialogProps> = ({ open, onClose, onImportComp
         const files: FileInfo[] = result.filePaths.map((path: string) => {
           const name = path.split(/[\\/]/).pop() || 'Unknown';
           let type: 'usfm' | 'archive' | 'unknown' = 'unknown';
-          
+
           if (/\.(usfm|sfm|txt)$/i.test(name)) {
             type = 'usfm';
           } else if (/\.(zip|tsproj|tstudio)$/i.test(name)) {
             type = 'archive';
           }
-          
+
           return { name, path, type };
         });
-        
+
         setSelectedFiles(files);
         setResult(null);
       }
@@ -182,16 +180,16 @@ const ImportDialog: React.FC<ImportDialogProps> = ({ open, onClose, onImportComp
   const getFileIcon = (type: FileInfo['type']) => {
     switch (type) {
       case 'usfm':
-        return <Description color="primary" />;
+        return <Description color='primary' />;
       case 'archive':
-        return <Folder color="secondary" />;
+        return <Folder color='secondary' />;
       default:
-        return <Description color="action" />;
+        return <Description color='action' />;
     }
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth='sm' fullWidth>
       <DialogTitle>Import Project</DialogTitle>
       <DialogContent>
         {/* Language Selection */}
@@ -200,7 +198,7 @@ const ImportDialog: React.FC<ImportDialogProps> = ({ open, onClose, onImportComp
           <Select
             value={targetLanguage}
             onChange={(e: SelectChangeEvent) => setTargetLanguage(e.target.value)}
-            label="Target Language"
+            label='Target Language'
           >
             {SUPPORTED_LANGUAGES.map(lang => (
               <MenuItem key={lang.code} value={lang.code}>
@@ -211,18 +209,18 @@ const ImportDialog: React.FC<ImportDialogProps> = ({ open, onClose, onImportComp
         </FormControl>
 
         {/* File Selection */}
-        <Card variant="outlined" sx={{ mb: 2 }}>
+        <Card variant='outlined' sx={{ mb: 2 }}>
           <CardContent>
             <Box sx={{ textAlign: 'center', py: 2 }}>
               <Button
-                variant="outlined"
+                variant='outlined'
                 startIcon={<Upload />}
                 onClick={handleFileSelect}
                 disabled={importing}
               >
                 Select Files
               </Button>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              <Typography variant='body2' color='text.secondary' sx={{ mt: 1 }}>
                 Supports USFM (.usfm, .sfm) and project archives (.zip, .tsproj)
               </Typography>
             </Box>
@@ -230,19 +228,14 @@ const ImportDialog: React.FC<ImportDialogProps> = ({ open, onClose, onImportComp
             {selectedFiles.length > 0 && (
               <>
                 <Divider sx={{ my: 2 }} />
-                <Typography variant="subtitle2" gutterBottom>
+                <Typography variant='subtitle2' gutterBottom>
                   Selected Files ({selectedFiles.length})
                 </Typography>
                 <List dense>
                   {selectedFiles.map((file, idx) => (
                     <ListItem key={idx}>
-                      <ListItemIcon>
-                        {getFileIcon(file.type)}
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={file.name}
-                        secondary={file.type.toUpperCase()}
-                      />
+                      <ListItemIcon>{getFileIcon(file.type)}</ListItemIcon>
+                      <ListItemText primary={file.name} secondary={file.type.toUpperCase()} />
                     </ListItem>
                   ))}
                 </List>
@@ -254,10 +247,10 @@ const ImportDialog: React.FC<ImportDialogProps> = ({ open, onClose, onImportComp
         {/* Progress */}
         {importing && (
           <Box sx={{ mb: 2 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            <Typography variant='body2' color='text.secondary' sx={{ mb: 1 }}>
               Importing files...
             </Typography>
-            <LinearProgress variant="determinate" value={progress} />
+            <LinearProgress variant='determinate' value={progress} />
           </Box>
         )}
 
@@ -268,9 +261,7 @@ const ImportDialog: React.FC<ImportDialogProps> = ({ open, onClose, onImportComp
             icon={result.success ? <CheckCircle /> : <ErrorIcon />}
             sx={{ mb: 2 }}
           >
-            {result.success
-              ? 'Import completed successfully!'
-              : result.error || 'Import failed.'}
+            {result.success ? 'Import completed successfully!' : result.error || 'Import failed.'}
           </Alert>
         )}
       </DialogContent>
@@ -280,8 +271,8 @@ const ImportDialog: React.FC<ImportDialogProps> = ({ open, onClose, onImportComp
         </Button>
         <Button
           onClick={handleImport}
-          color="primary"
-          variant="contained"
+          color='primary'
+          variant='contained'
           disabled={selectedFiles.length === 0 || importing}
           startIcon={importing ? <CircularProgress size={16} /> : undefined}
         >

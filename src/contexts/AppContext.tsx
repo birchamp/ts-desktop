@@ -88,9 +88,7 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
     case 'UPDATE_PROJECT':
       return {
         ...state,
-        projects: state.projects.map(p =>
-          p.id === action.payload.id ? action.payload : p
-        ),
+        projects: state.projects.map(p => (p.id === action.payload.id ? action.payload : p)),
       };
     case 'DELETE_PROJECT':
       return {
@@ -150,18 +148,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     addProject: (project: Project) => dispatch({ type: 'ADD_PROJECT', payload: project }),
     updateProject: (project: Project) => dispatch({ type: 'UPDATE_PROJECT', payload: project }),
     deleteProject: (projectId: string) => dispatch({ type: 'DELETE_PROJECT', payload: projectId }),
-    updateSettings: (settings: Partial<AppSettings>) => dispatch({ type: 'UPDATE_SETTINGS', payload: settings }),
+    updateSettings: (settings: Partial<AppSettings>) =>
+      dispatch({ type: 'UPDATE_SETTINGS', payload: settings }),
     setDialog: (key: keyof DialogState, value: boolean) =>
       dispatch({ type: 'SET_DIALOG', payload: { key, value } }),
     setLoading: (loading: boolean) => dispatch({ type: 'SET_LOADING', payload: loading }),
     setAppLoaded: (loaded: boolean) => dispatch({ type: 'SET_APP_LOADED', payload: loaded }),
   };
 
-  return (
-    <AppContext.Provider value={contextValue}>
-      {children}
-    </AppContext.Provider>
-  );
+  return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;
 };
 
 // Hook to use the context
