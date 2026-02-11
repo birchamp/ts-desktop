@@ -1,5 +1,6 @@
 import { projectRepository } from '../projectRepository';
 import { loadDraft } from '../translationDrafts';
+import { loadReviewDraft } from '../reviewDrafts';
 import { readAbsoluteText, readJson, readText, writeJson, writeText } from '../../utils/files';
 import type { ProjectContextData } from '../projectRepository';
 
@@ -24,6 +25,7 @@ export interface ProjectBackupPayloadV1 {
     parsedJson: unknown | null;
   };
   draft: unknown | null;
+  review: unknown | null;
 }
 
 function isBackupPayloadV1(value: unknown): value is ProjectBackupPayloadV1 {
@@ -46,10 +48,11 @@ export async function buildProjectBackup(projectId: string): Promise<ProjectBack
     throw new Error(`Project ${projectId} not found.`);
   }
 
-  const [context, assets, draft] = await Promise.all([
+  const [context, assets, draft, review] = await Promise.all([
     projectRepository.getProjectContext(projectId),
     projectRepository.getProjectAssets(projectId),
     loadDraft(projectId),
+    loadReviewDraft(projectId),
   ]);
 
   const [sourceUsfmText, parsedJson] = await Promise.all([
@@ -78,6 +81,7 @@ export async function buildProjectBackup(projectId: string): Promise<ProjectBack
       parsedJson,
     },
     draft: draft && typeof draft === 'object' ? draft : null,
+    review: review && typeof review === 'object' ? review : null,
   };
 }
 
@@ -140,6 +144,15 @@ export async function importProjectBackup(absFilePath: string): Promise<{
       updatedAt: Date.now(),
     };
     await writeJson(`projects/${newProjectId}/translation-draft.json`, nextDraft);
+  }
+
+  if (payload.review && typeof payload.review === 'object') {
+    const nextReview = {
+      ...(payload.review as Record<string, unknown>),
+      projectId: newProjectId,
+      updatedAt: Date.now(),
+    };
+    await writeJson(`projects/${newProjectId}/review-draft.json`, nextReview);
   }
 
   return {

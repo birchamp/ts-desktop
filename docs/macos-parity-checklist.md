@@ -34,7 +34,7 @@ Status scale: `PASS`, `FAIL`, `BLOCKED`
 |---|---|---|---|---|
 | T-01 | Open translation workspace | Selected project opens to translation screen with expected panes/content | PASS | Translation screen loads project context and preloads source + Door43 support resources where available. |
 | T-02 | Save translation edits | Edits persist after navigation away and app restart | PASS | Verse/chapter editor state now saves to per-project draft storage and reloads on return. |
-| T-03 | Review workflow navigation | Review flow opens and supports expected verse/project review actions | FAIL | Review screen still lacks full legacy verse/project review actions. |
+| T-03 | Review workflow navigation | Review flow opens and supports expected verse/project review actions | BLOCKED | Review queue now supports chapter/verse selection, status actions (approve/needs-work/pending), and review notes persistence; interactive parity sign-off still pending. |
 | T-04 | Translation to review continuity | Data/state remains consistent when switching between screens | PASS | Shared `projectId` routing + shared draft loading maintain continuity between translate/review flows. |
 
 ## Print and Export Screen
@@ -63,9 +63,9 @@ Status scale: `PASS`, `FAIL`, `BLOCKED`
 
 ## Gate 1 Exit Summary
 
-- P0 blockers found: `1`
-- P1 blockers found: `8`
+- P0 blockers found: `0`
+- P1 blockers found: `9`
 - Overall Gate 1 readiness: `NOT READY`
 
 P0 blockers tracked in this run:
-- `T-03`
+- None
