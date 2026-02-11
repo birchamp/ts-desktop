@@ -1,6 +1,6 @@
 # translationStudio Desktop Modernization Plan
 
-Last updated: 2026-02-11 (post Gate 1 checklist execution)
+Last updated: 2026-02-11 (core-translation parity branch implementation in progress)
 
 ## Objective
 
@@ -27,6 +27,14 @@ Open risks still present:
 - Translation workflow parity is incomplete (no verse-level navigation/editor persistence parity yet).
 - Cached-resource support-resource preloading parity (TN/TWL/TW) is not complete.
 - Basic startup smoke test is not yet scriptable/repeatable.
+
+Current branch implementation status (`codex/g1-core-translation-parity`):
+
+- Verse/chapter navigation and editable target pane are implemented in `TranslationScreen`.
+- Draft save/reload persistence is implemented for project/book/chapter/verse text.
+- Translate-to-review continuity is implemented via shared `projectId` routing and shared draft data.
+- Cached-resource TN/TWL/TW preload support is implemented in downloader service.
+- Remaining risk: parity checklist evidence must be re-run and recorded for updated workflows.
 
 ## Execution Strategy (Optimal Order)
 
@@ -176,8 +184,9 @@ Exit criteria:
 ## Immediate Next Work (Recommended)
 
 1. Execute `codex/g1-core-translation-parity` as one branch and close all translation/review P0 parity gaps together.
-2. Execute `codex/g1-workflow-parity-ops` as one branch and close project/import/export/academy/update parity gaps together.
-3. Execute `codex/g0-smoke-and-gating-automation` to make startup and gate checks scriptable/repeatable.
+2. Re-run Gate 1 checklist entries for translation/review on this branch and record updated pass/fail evidence.
+3. Execute `codex/g1-workflow-parity-ops` as one branch and close project/import/export/academy/update parity gaps together.
+4. Execute `codex/g0-smoke-and-gating-automation` to make startup and gate checks scriptable/repeatable.
 
 Progress update:
 

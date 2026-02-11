@@ -68,6 +68,15 @@ const NAV_ITEMS: NavItem[] = [
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const projectId = new URLSearchParams(location.search).get('projectId');
+
+  const targetPathForItem = (path: string): string => {
+    if (!projectId) return path;
+    if (path === '/translate' || path === '/review') {
+      return `${path}?projectId=${encodeURIComponent(projectId)}`;
+    }
+    return path;
+  };
 
   return (
     <Box
@@ -87,7 +96,7 @@ const Sidebar: React.FC = () => {
             <Tooltip key={item.path} title={item.description} placement='right' arrow>
               <ListItemButton
                 selected={selected}
-                onClick={() => navigate(item.path)}
+                onClick={() => navigate(targetPathForItem(item.path))}
                 sx={{
                   borderRadius: '0 24px 24px 0',
                   marginRight: 1,

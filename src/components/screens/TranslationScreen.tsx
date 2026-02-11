@@ -1,6 +1,19 @@
 import React from 'react';
-import { Alert, Box, Chip, CircularProgress, Divider, Paper, Typography } from '@mui/material';
-import { useSearchParams } from 'react-router-dom';
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Divider,
+  List,
+  ListItemButton,
+  ListItemText,
+  Paper,
+  TextField,
+  Typography,
+} from '@mui/material';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ProjectContextRecord,
   ProjectRecord,
@@ -10,12 +23,25 @@ import {
 import {
   CatalogResource,
   CachedResource,
-  LoadedCatalogSourceText,
-  LoadedSupportBundle,
   ParsedTwArticle,
   resourceDownloader,
 } from '../../services/dcs/downloader';
 import { TnTsvRow, TwlTsvRow } from '../../services/dcs/resourceSchema';
+import {
+  TranslationDraftDocument,
+  createEmptyDraft,
+  getVerseText,
+  loadDraft,
+  saveDraft,
+  summarizeBookDraft,
+  upsertVerseText,
+} from '../../services/translationDrafts';
+
+interface SourceVerse {
+  chapter: number;
+  verse: number;
+  text: string;
+}
 
 function createCatalogResourceFromContext(
   resource: ProjectResourceContext
@@ -45,53 +71,83 @@ function createCachedResourceFromContext(resource: ProjectResourceContext): Cach
   };
 }
 
-function matchesBook(candidate: string, bookId: string): boolean {
-  const normalizedCandidate = candidate.trim().toLowerCase();
-  const normalizedBook = bookId.trim().toLowerCase();
-  if (!normalizedCandidate || !normalizedBook) return false;
-  if (normalizedCandidate === normalizedBook) return true;
-  const escapedBookId = normalizedBook.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const separatorPattern = new RegExp(`(^|[._\\-/])${escapedBookId}([._\\-/]|$)`, 'i');
-  return separatorPattern.test(normalizedCandidate);
+function parseSourceVerses(usfmText: string): SourceVerse[] {
+  const verses: SourceVerse[] = [];
+  const lines = usfmText.split(/\r?\n/);
+  let chapter = 1;
+  let currentVerse: SourceVerse | null = null;
+
+  const flushCurrent = () => {
+    if (!currentVerse) return;
+    const text = currentVerse.text.trim();
+    if (text.length > 0) {
+      verses.push({ ...currentVerse, text });
+    }
+  };
+
+  lines.forEach(line => {
+    const chapterMatch = line.match(/^\s*\\c\s+(\d+)/);
+    if (chapterMatch) {
+      flushCurrent();
+      currentVerse = null;
+      chapter = parseInt(chapterMatch[1], 10) || chapter;
+      return;
+    }
+
+    const verseMatch = line.match(/^\s*\\v\s+(\d+)[^\s]*\s*(.*)$/);
+    if (verseMatch) {
+      flushCurrent();
+      currentVerse = {
+        chapter,
+        verse: parseInt(verseMatch[1], 10) || 0,
+        text: verseMatch[2] || '',
+      };
+      return;
+    }
+
+    if (!currentVerse) return;
+    if (/^\s*\\/.test(line)) return;
+    currentVerse.text = `${currentVerse.text} ${line.trim()}`.trim();
+  });
+
+  flushCurrent();
+  return verses.filter(item => item.chapter > 0 && item.verse > 0);
 }
 
-function rowsForBook<R>(
-  files: Array<{ identifier: string; path: string; rows: R[] }> | undefined | null,
-  bookId?: string
-): R[] {
-  if (!files || files.length === 0) return [];
-  if (!bookId) return files.flatMap(file => file.rows);
-  const matched = files.filter(
-    file => matchesBook(file.identifier, bookId) || matchesBook(file.path, bookId)
-  );
-  return (matched.length > 0 ? matched : files).flatMap(file => file.rows);
-}
-
-function trimSourcePreview(text: string): string {
-  const maxLines = 140;
-  const lines = text.split(/\r?\n/);
-  if (lines.length <= maxLines) return text;
-  return `${lines.slice(0, maxLines).join('\n')}\n\n...source truncated for preview...`;
+function verseMatches(row: TnTsvRow | TwlTsvRow, chapter: number, verse: number): boolean {
+  const parsed = row.parsedReference;
+  if (parsed.chapter !== chapter) return false;
+  if (parsed.verseStart == null) return false;
+  const end = parsed.verseEnd ?? parsed.verseStart;
+  return verse >= parsed.verseStart && verse <= end;
 }
 
 const TranslationScreen: React.FC = () => {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const projectId = searchParams.get('projectId');
+
   const [loadingProject, setLoadingProject] = React.useState(false);
   const [projectError, setProjectError] = React.useState<string | null>(null);
   const [project, setProject] = React.useState<ProjectRecord | null>(null);
   const [projectContext, setProjectContext] = React.useState<ProjectContextRecord | null>(null);
+
   const [loadingResources, setLoadingResources] = React.useState(false);
   const [resourceError, setResourceError] = React.useState<string | null>(null);
-  const [resourceNotice, setResourceNotice] = React.useState<string | null>(null);
-  const [source, setSource] = React.useState<LoadedCatalogSourceText | null>(null);
-  const [cachedSourcePath, setCachedSourcePath] = React.useState<string | null>(null);
-  const [cachedSourceBookId, setCachedSourceBookId] = React.useState<string | null>(null);
-  const [sourcePreview, setSourcePreview] = React.useState<string | null>(null);
-  const [supportBundle, setSupportBundle] = React.useState<LoadedSupportBundle | null>(null);
+  const [sourceReference, setSourceReference] = React.useState<string | null>(null);
+  const [sourceVerses, setSourceVerses] = React.useState<SourceVerse[]>([]);
+  const [unresolvedRelations, setUnresolvedRelations] = React.useState<string[]>([]);
   const [tnRows, setTnRows] = React.useState<TnTsvRow[]>([]);
   const [twlRows, setTwlRows] = React.useState<TwlTsvRow[]>([]);
   const [twArticles, setTwArticles] = React.useState<ParsedTwArticle[]>([]);
+
+  const [selectedChapter, setSelectedChapter] = React.useState<number | null>(null);
+  const [selectedVerse, setSelectedVerse] = React.useState<number | null>(null);
+
+  const [draft, setDraft] = React.useState<TranslationDraftDocument | null>(null);
+  const [translationText, setTranslationText] = React.useState('');
+  const [editVersion, setEditVersion] = React.useState(0);
+  const [saveState, setSaveState] = React.useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   React.useEffect(() => {
     if (!projectId) {
@@ -138,21 +194,41 @@ const TranslationScreen: React.FC = () => {
     };
   }, [projectId]);
 
+  React.useEffect(() => {
+    if (!projectId) {
+      setDraft(null);
+      setTranslationText('');
+      setSaveState('idle');
+      setEditVersion(0);
+      return;
+    }
+
+    let cancelled = false;
+    const loadProjectDraft = async () => {
+      const loaded = await loadDraft(projectId);
+      if (cancelled) return;
+      setDraft(loaded);
+      setSaveState('idle');
+      setEditVersion(0);
+    };
+
+    loadProjectDraft();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
   const context = projectContext?.context;
   const book = context?.book;
   const resource = context?.resource;
-  const supportSummary = context?.supportSummary;
 
   React.useEffect(() => {
     if (!resource || resource.source === 'none') {
       setLoadingResources(false);
       setResourceError(null);
-      setResourceNotice(null);
-      setSource(null);
-      setCachedSourcePath(null);
-      setCachedSourceBookId(null);
-      setSourcePreview(null);
-      setSupportBundle(null);
+      setSourceReference(null);
+      setSourceVerses([]);
+      setUnresolvedRelations([]);
       setTnRows([]);
       setTwlRows([]);
       setTwArticles([]);
@@ -163,7 +239,6 @@ const TranslationScreen: React.FC = () => {
     const preloadResources = async () => {
       setLoadingResources(true);
       setResourceError(null);
-      setResourceNotice(null);
 
       try {
         if (resource.source === 'catalog') {
@@ -189,14 +264,13 @@ const TranslationScreen: React.FC = () => {
           ]);
 
           if (cancelled) return;
-
-          setSource(loadedSource);
-          setCachedSourcePath(null);
-          setCachedSourceBookId(null);
-          setSourcePreview(trimSourcePreview(loadedSource.text));
-          setSupportBundle(loadedSupport);
-          setTnRows(rowsForBook(loadedSupport.tn?.files, book?.id));
-          setTwlRows(rowsForBook(loadedSupport.twl?.files, book?.id));
+          setSourceReference(
+            `${loadedSource.resource.owner}/${loadedSource.resource.repo}:${loadedSource.path}`
+          );
+          setSourceVerses(parseSourceVerses(loadedSource.text));
+          setUnresolvedRelations(loadedSupport.unresolvedRelations);
+          setTnRows(loadedSupport.tn ? loadedSupport.tn.files.flatMap(file => file.rows) : []);
+          setTwlRows(loadedSupport.twl ? loadedSupport.twl.files.flatMap(file => file.rows) : []);
           setTwArticles(loadedSupport.tw?.files || []);
           return;
         }
@@ -206,30 +280,28 @@ const TranslationScreen: React.FC = () => {
           throw new Error('Project context is missing local resource path.');
         }
 
-        const loadedSource = await resourceDownloader.loadCachedSourceText(
-          cachedResource,
-          book?.id
-        );
-        if (cancelled) return;
+        const cachedResources = await resourceDownloader.listCached();
+        const primary =
+          cachedResources.find(item => item.containerPath === cachedResource.containerPath) ||
+          cachedResource;
 
-        setSource(null);
-        setCachedSourcePath(loadedSource.path);
-        setCachedSourceBookId(loadedSource.bookId);
-        setSourcePreview(trimSourcePreview(loadedSource.text));
-        setSupportBundle(null);
-        setTnRows([]);
-        setTwlRows([]);
-        setTwArticles([]);
-        setResourceNotice(
-          'TN/TWL/TW pre-loading is currently available for Door43 catalog resources.'
-        );
+        const [loadedSource, loadedSupport] = await Promise.all([
+          resourceDownloader.loadCachedSourceText(primary, book?.id),
+          resourceDownloader.loadCachedSupportBundle(primary, cachedResources),
+        ]);
+
+        if (cancelled) return;
+        setSourceReference(loadedSource.path);
+        setSourceVerses(parseSourceVerses(loadedSource.text));
+        setUnresolvedRelations(loadedSupport.unresolvedRelations);
+        setTnRows(loadedSupport.tn ? loadedSupport.tn.files.flatMap(file => file.rows) : []);
+        setTwlRows(loadedSupport.twl ? loadedSupport.twl.files.flatMap(file => file.rows) : []);
+        setTwArticles(loadedSupport.tw?.files || []);
       } catch (e) {
         if (cancelled) return;
-        setSource(null);
-        setCachedSourcePath(null);
-        setCachedSourceBookId(null);
-        setSourcePreview(null);
-        setSupportBundle(null);
+        setSourceReference(null);
+        setSourceVerses([]);
+        setUnresolvedRelations([]);
         setTnRows([]);
         setTwlRows([]);
         setTwArticles([]);
@@ -258,6 +330,116 @@ const TranslationScreen: React.FC = () => {
     resource?.version,
   ]);
 
+  const chapters = React.useMemo(
+    () => Array.from(new Set(sourceVerses.map(item => item.chapter))).sort((a, b) => a - b),
+    [sourceVerses]
+  );
+
+  React.useEffect(() => {
+    if (chapters.length === 0) {
+      setSelectedChapter(null);
+      return;
+    }
+    setSelectedChapter(current => (current && chapters.includes(current) ? current : chapters[0]));
+  }, [chapters]);
+
+  const chapterVerses = React.useMemo(() => {
+    if (selectedChapter == null) return [];
+    return sourceVerses
+      .filter(item => item.chapter === selectedChapter)
+      .sort((a, b) => a.verse - b.verse);
+  }, [selectedChapter, sourceVerses]);
+
+  React.useEffect(() => {
+    if (chapterVerses.length === 0) {
+      setSelectedVerse(null);
+      return;
+    }
+    setSelectedVerse(current =>
+      current && chapterVerses.some(item => item.verse === current)
+        ? current
+        : chapterVerses[0].verse
+    );
+  }, [chapterVerses]);
+
+  React.useEffect(() => {
+    if (!draft || !book || selectedChapter == null || selectedVerse == null) {
+      setTranslationText('');
+      return;
+    }
+    setTranslationText(getVerseText(draft, book.id, selectedChapter, selectedVerse));
+  }, [draft, book, selectedChapter, selectedVerse]);
+
+  React.useEffect(() => {
+    if (!projectId || !draft || editVersion === 0) return;
+
+    let cancelled = false;
+    setSaveState('saving');
+    const timer = setTimeout(async () => {
+      const ok = await saveDraft(draft);
+      if (cancelled) return;
+      setSaveState(ok ? 'saved' : 'error');
+    }, 500);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [draft, editVersion, projectId]);
+
+  const selectedSourceVerse = React.useMemo(() => {
+    if (selectedChapter == null || selectedVerse == null) return null;
+    return (
+      sourceVerses.find(item => item.chapter === selectedChapter && item.verse === selectedVerse) ||
+      null
+    );
+  }, [selectedChapter, selectedVerse, sourceVerses]);
+
+  const tnForVerse = React.useMemo(() => {
+    if (selectedChapter == null || selectedVerse == null) return [];
+    return tnRows.filter(row => verseMatches(row, selectedChapter, selectedVerse));
+  }, [selectedChapter, selectedVerse, tnRows]);
+
+  const twlForVerse = React.useMemo(() => {
+    if (selectedChapter == null || selectedVerse == null) return [];
+    return twlRows.filter(row => verseMatches(row, selectedChapter, selectedVerse));
+  }, [selectedChapter, selectedVerse, twlRows]);
+
+  const twForVerse = React.useMemo(() => {
+    const slugs = new Set(
+      twlForVerse
+        .map(item => item.twRcLink?.path?.split('/').pop()?.toLowerCase())
+        .filter((item): item is string => Boolean(item))
+    );
+    if (slugs.size === 0) return twArticles.slice(0, 12);
+    return twArticles.filter(item => (item.slug ? slugs.has(item.slug) : false));
+  }, [twArticles, twlForVerse]);
+
+  const bookProgress = React.useMemo(() => {
+    if (!draft || !book)
+      return { translatedCount: 0, sourceVerseCount: sourceVerses.length, percent: 0 };
+    return summarizeBookDraft(draft, book.id, sourceVerses.length);
+  }, [book, draft, sourceVerses.length]);
+
+  const handleTranslationChange = (nextText: string) => {
+    setTranslationText(nextText);
+    if (!projectId || !book || selectedChapter == null || selectedVerse == null) return;
+    setDraft(current => {
+      const base = current || createEmptyDraft(projectId);
+      return upsertVerseText(base, book.id, selectedChapter, selectedVerse, nextText);
+    });
+    setEditVersion(version => version + 1);
+    setSaveState('idle');
+  };
+
+  const openReview = () => {
+    if (!projectId) {
+      navigate('/review');
+      return;
+    }
+    navigate(`/review?projectId=${encodeURIComponent(projectId)}`);
+  };
+
   return (
     <Box p={2} display='flex' flexDirection='column' style={{ gap: 12, height: '100%' }}>
       {!projectId && (
@@ -268,7 +450,6 @@ const TranslationScreen: React.FC = () => {
 
       {projectError && <Alert severity='warning'>{projectError}</Alert>}
       {resourceError && <Alert severity='warning'>{resourceError}</Alert>}
-      {resourceNotice && <Alert severity='info'>{resourceNotice}</Alert>}
 
       {(loadingProject || loadingResources) && (
         <Box display='flex' alignItems='center' style={{ gap: 8 }}>
@@ -282,7 +463,7 @@ const TranslationScreen: React.FC = () => {
       )}
 
       <Box display='flex' style={{ gap: 16, height: '100%' }}>
-        <Paper style={{ width: 320, minWidth: 280, padding: 12, overflow: 'auto' }}>
+        <Paper style={{ width: 340, minWidth: 320, padding: 12, overflow: 'auto' }}>
           <Typography variant='h6'>Navigation</Typography>
           {project ? (
             <Box sx={{ mt: 1 }}>
@@ -299,55 +480,66 @@ const TranslationScreen: React.FC = () => {
                     variant='outlined'
                   />
                 )}
-                {supportSummary && (
-                  <Chip
-                    label={`TN ${supportSummary.tnRows} • TWL ${supportSummary.twlRows} • TW ${supportSummary.twArticles}`}
-                    size='small'
-                    variant='outlined'
-                  />
-                )}
+                <Chip
+                  label={`Progress: ${bookProgress.translatedCount}/${bookProgress.sourceVerseCount} (${bookProgress.percent}%)`}
+                  size='small'
+                  variant='outlined'
+                />
               </Box>
+              <Button variant='outlined' size='small' sx={{ mt: 1.5 }} onClick={openReview}>
+                Open Review
+              </Button>
             </Box>
-          ) : (
-            <Typography variant='body2' color='text.secondary'>
-              Book/Chapter/Verse
-            </Typography>
-          )}
+          ) : null}
+
+          <Divider sx={{ my: 1.5 }} />
+
+          <Typography variant='subtitle2'>Chapters</Typography>
+          <List dense sx={{ maxHeight: 120, overflow: 'auto' }}>
+            {chapters.map(chapter => (
+              <ListItemButton
+                key={`chapter-${chapter}`}
+                selected={selectedChapter === chapter}
+                onClick={() => setSelectedChapter(chapter)}
+              >
+                <ListItemText primary={`Chapter ${chapter}`} />
+              </ListItemButton>
+            ))}
+          </List>
+
+          <Typography variant='subtitle2' sx={{ mt: 1 }}>
+            Verses
+          </Typography>
+          <List dense sx={{ maxHeight: 260, overflow: 'auto' }}>
+            {chapterVerses.map(verse => (
+              <ListItemButton
+                key={`verse-${verse.chapter}-${verse.verse}`}
+                selected={selectedVerse === verse.verse}
+                onClick={() => setSelectedVerse(verse.verse)}
+              >
+                <ListItemText primary={`${verse.chapter}:${verse.verse}`} />
+              </ListItemButton>
+            ))}
+          </List>
         </Paper>
 
         <Paper style={{ flex: 1, padding: 12, overflow: 'auto' }}>
           <Typography variant='h6'>Source Text</Typography>
-          {sourcePreview ? (
+          <Typography variant='body2' color='text.secondary'>
+            {sourceReference ? `Source: ${sourceReference}` : 'No source loaded'}
+          </Typography>
+          {selectedSourceVerse ? (
             <Box sx={{ mt: 1 }}>
-              <Typography variant='body2' color='text.secondary' sx={{ mb: 0.75 }}>
-                {source
-                  ? `Loaded from ${source.resource.owner}/${source.resource.repo} (${source.path})`
-                  : `Loaded from local cache (${cachedSourcePath})`}
+              <Typography variant='subtitle2'>
+                {selectedSourceVerse.chapter}:{selectedSourceVerse.verse}
               </Typography>
-              <Typography variant='body2' color='text.secondary' sx={{ mb: 1 }}>
-                Book: {source?.bookId || cachedSourceBookId || book?.id || 'unknown'}
+              <Typography variant='body2' sx={{ whiteSpace: 'pre-wrap' }}>
+                {selectedSourceVerse.text}
               </Typography>
-              <Box
-                component='pre'
-                sx={{
-                  m: 0,
-                  p: 1.25,
-                  bgcolor: '#f7f7f7',
-                  borderRadius: 1,
-                  border: '1px solid #e0e0e0',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                  fontFamily: 'monospace',
-                  fontSize: 12,
-                  lineHeight: 1.35,
-                }}
-              >
-                {sourcePreview}
-              </Box>
             </Box>
           ) : (
-            <Typography variant='body2' color='text.secondary'>
-              Source text will load after selecting a project with a resource context.
+            <Typography variant='body2' color='text.secondary' sx={{ mt: 1 }}>
+              No verse selected.
             </Typography>
           )}
         </Paper>
@@ -357,22 +549,22 @@ const TranslationScreen: React.FC = () => {
           <Typography variant='body2' color='text.secondary'>
             TN: {tnRows.length} • TWL: {twlRows.length} • TW: {twArticles.length}
           </Typography>
-          {supportBundle?.unresolvedRelations?.length ? (
+          {unresolvedRelations.length > 0 && (
             <Typography variant='caption' color='warning.main'>
-              Unresolved relations: {supportBundle.unresolvedRelations.join(', ')}
+              Unresolved relations: {unresolvedRelations.join(', ')}
             </Typography>
-          ) : null}
+          )}
 
           <Divider sx={{ my: 1.5 }} />
 
           <Typography variant='subtitle2'>Translation Notes</Typography>
-          {tnRows.length === 0 ? (
+          {tnForVerse.length === 0 ? (
             <Typography variant='body2' color='text.secondary'>
-              No TN rows loaded for this book.
+              No TN rows for selected verse.
             </Typography>
           ) : (
             <Box sx={{ mt: 0.5 }}>
-              {tnRows.slice(0, 12).map((row, index) => (
+              {tnForVerse.slice(0, 10).map((row, index) => (
                 <Box key={`${row.id || 'tn'}:${index}`} sx={{ mb: 1 }}>
                   <Typography variant='caption' color='text.secondary'>
                     {row.reference || 'n/a'} • {row.id || 'no-id'}
@@ -386,13 +578,13 @@ const TranslationScreen: React.FC = () => {
           <Divider sx={{ my: 1.5 }} />
 
           <Typography variant='subtitle2'>Translation Words Links</Typography>
-          {twlRows.length === 0 ? (
+          {twlForVerse.length === 0 ? (
             <Typography variant='body2' color='text.secondary'>
-              No TWL rows loaded for this book.
+              No TWL rows for selected verse.
             </Typography>
           ) : (
             <Box sx={{ mt: 0.5 }}>
-              {twlRows.slice(0, 12).map((row, index) => (
+              {twlForVerse.slice(0, 10).map((row, index) => (
                 <Box key={`${row.id || 'twl'}:${index}`} sx={{ mb: 1 }}>
                   <Typography variant='caption' color='text.secondary'>
                     {row.reference || 'n/a'} • {row.id || 'no-id'}
@@ -408,13 +600,13 @@ const TranslationScreen: React.FC = () => {
           <Divider sx={{ my: 1.5 }} />
 
           <Typography variant='subtitle2'>Translation Words</Typography>
-          {twArticles.length === 0 ? (
+          {twForVerse.length === 0 ? (
             <Typography variant='body2' color='text.secondary'>
-              No TW articles loaded.
+              No TW articles matched selected verse links.
             </Typography>
           ) : (
             <Box sx={{ mt: 0.5 }}>
-              {twArticles.slice(0, 12).map((article, index) => (
+              {twForVerse.slice(0, 10).map((article, index) => (
                 <Box key={`${article.path}:${index}`} sx={{ mb: 1 }}>
                   <Typography variant='caption' color='text.secondary'>
                     {article.category || 'general'} • {article.slug || article.path}
@@ -429,8 +621,23 @@ const TranslationScreen: React.FC = () => {
         <Paper style={{ flex: 1, padding: 12, overflow: 'auto' }}>
           <Typography variant='h6'>Target Translation</Typography>
           <Typography variant='body2' color='text.secondary'>
-            Placeholder target editor...
+            {selectedChapter != null && selectedVerse != null
+              ? `Editing ${selectedChapter}:${selectedVerse}`
+              : 'Select a verse to edit'}
           </Typography>
+          <Typography variant='caption' color='text.secondary'>
+            Save state: {saveState}
+          </Typography>
+          <TextField
+            multiline
+            fullWidth
+            minRows={18}
+            maxRows={32}
+            sx={{ mt: 1 }}
+            value={translationText}
+            onChange={event => handleTranslationChange(event.target.value)}
+            placeholder='Enter translation text for the selected verse...'
+          />
         </Paper>
       </Box>
     </Box>

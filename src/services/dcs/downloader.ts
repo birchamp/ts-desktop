@@ -119,6 +119,24 @@ export interface LoadedSupportBundle {
   unresolvedRelations: string[];
 }
 
+export interface LoadedCachedResourceRows<T> {
+  resource: CachedResource;
+  files: ParsedBookRows<T>[];
+}
+
+export interface LoadedCachedTwResource {
+  resource: CachedResource;
+  files: ParsedTwArticle[];
+}
+
+export interface LoadedCachedSupportBundle {
+  primary: CachedResource;
+  tn?: LoadedCachedResourceRows<TnTsvRow> | null;
+  twl?: LoadedCachedResourceRows<TwlTsvRow> | null;
+  tw?: LoadedCachedTwResource | null;
+  unresolvedRelations: string[];
+}
+
 export interface LoadedCatalogSourceText {
   resource: CatalogResource;
   bookId: string;
@@ -372,6 +390,7 @@ function buildCatalogDependencyGraph(resources: CatalogResource[]): DependencyGr
 
 function sanitizeRelativePath(relPath: string): string {
   return relPath
+    .replace(/\\/g, '/')
     .trim()
     .replace(/^[./]+/, '')
     .replace(/\/+/g, '/');
@@ -440,6 +459,14 @@ function toCatalogKey(resource: CatalogResource): string | null {
   });
 }
 
+function toCachedKey(resource: CachedResource): string | null {
+  return toResourceKey({
+    id: resource.id,
+    language: resource.language,
+    relation: resource.relations || [],
+  });
+}
+
 function findRelatedResources(
   resource: CatalogResource,
   resources: CatalogResource[]
@@ -458,6 +485,43 @@ function findRelatedResources(
   const resolved: CatalogResource[] = [];
   const unresolved: string[] = [];
   resource.relation.forEach(raw => {
+    const relation = parseRelationRef(raw);
+    if (!relation.key) {
+      unresolved.push(raw);
+      return;
+    }
+    const match = byKey.get(relation.key);
+    if (match) {
+      resolved.push(match);
+    } else {
+      unresolved.push(raw);
+    }
+  });
+
+  return {
+    resolved: Array.from(new Set(resolved)),
+    unresolved: Array.from(new Set(unresolved)),
+  };
+}
+
+function findRelatedCachedResources(
+  resource: CachedResource,
+  resources: CachedResource[]
+): {
+  resolved: CachedResource[];
+  unresolved: string[];
+} {
+  const byKey = new Map<string, CachedResource>();
+  resources.forEach(item => {
+    const key = toCachedKey(item);
+    if (key) {
+      byKey.set(key, item);
+    }
+  });
+
+  const resolved: CachedResource[] = [];
+  const unresolved: string[] = [];
+  (resource.relations || []).forEach(raw => {
     const relation = parseRelationRef(raw);
     if (!relation.key) {
       unresolved.push(raw);
@@ -504,6 +568,42 @@ async function listFilesRecursively(
     }
     if (entry.type === 'dir' && maxDepth > 0) {
       const nested = await listFilesRecursively(owner, repo, ref, entry.path, {
+        maxDepth: maxDepth - 1,
+      });
+      files.push(...nested);
+    }
+  }
+
+  return files;
+}
+
+async function listLocalFilesRecursively(
+  containerPath: string,
+  relPath: string,
+  options: { maxDepth?: number } = {}
+): Promise<string[]> {
+  const maxDepth = options.maxDepth ?? 6;
+  if (maxDepth < 0) return [];
+
+  const cleanPath = sanitizeRelativePath(relPath);
+  const root = cleanPath ? path.join(containerPath, cleanPath) : containerPath;
+  let entries: Dirent[];
+  try {
+    entries = await fs.promises.readdir(root, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  const files: string[] = [];
+  for (const entry of entries) {
+    const absPath = path.join(root, entry.name);
+    const itemRelPath = sanitizeRelativePath(path.relative(containerPath, absPath));
+    if (entry.isFile()) {
+      files.push(itemRelPath);
+      continue;
+    }
+    if (entry.isDirectory() && maxDepth > 0) {
+      const nested = await listLocalFilesRecursively(containerPath, itemRelPath, {
         maxDepth: maxDepth - 1,
       });
       files.push(...nested);
@@ -665,6 +765,191 @@ async function loadSupportBundle(
   };
 }
 
+async function loadParsedCachedTnResource(
+  resource: CachedResource
+): Promise<LoadedCachedResourceRows<TnTsvRow>> {
+  const manifest = await readManifest(resource.containerPath);
+  const projects = manifest?.projects || [];
+  const explicitTsv = projects
+    .map(item => ({
+      identifier: item.identifier || deriveProjectId(item.path || '', 'unknown'),
+      path: sanitizeRelativePath(item.path || ''),
+    }))
+    .filter(item => item.path.length > 0 && extensionLower(item.path) === '.tsv');
+
+  const candidateFiles: { identifier: string; path: string }[] = [];
+  const prioritized = explicitTsv.filter(item => basenameLower(item.path).startsWith('tn_'));
+  (prioritized.length > 0 ? prioritized : explicitTsv).forEach(item => {
+    candidateFiles.push(item);
+  });
+
+  if (candidateFiles.length === 0) {
+    const discovered = await listLocalFilesRecursively(resource.containerPath, '', { maxDepth: 8 });
+    const tsvFiles = discovered.filter(item => extensionLower(item) === '.tsv');
+    const tnPrefixed = tsvFiles.filter(item => basenameLower(item).startsWith('tn_'));
+    (tnPrefixed.length > 0 ? tnPrefixed : tsvFiles).forEach(filePath => {
+      candidateFiles.push({
+        identifier: deriveProjectId(filePath, 'unknown'),
+        path: filePath,
+      });
+    });
+  }
+
+  const parsedFiles: ParsedBookRows<TnTsvRow>[] = [];
+  for (const item of candidateFiles) {
+    try {
+      const absPath = path.join(resource.containerPath, item.path);
+      const text = await fs.promises.readFile(absPath, 'utf8');
+      parsedFiles.push({
+        identifier: item.identifier,
+        path: item.path,
+        rows: parseTnTsv(text),
+      });
+    } catch {
+      // Ignore unreadable files and continue loading the rest.
+    }
+  }
+
+  return {
+    resource,
+    files: parsedFiles,
+  };
+}
+
+async function loadParsedCachedTwlResource(
+  resource: CachedResource
+): Promise<LoadedCachedResourceRows<TwlTsvRow>> {
+  const manifest = await readManifest(resource.containerPath);
+  const projects = manifest?.projects || [];
+  const explicitTsv = projects
+    .map(item => ({
+      identifier: item.identifier || deriveProjectId(item.path || '', 'unknown'),
+      path: sanitizeRelativePath(item.path || ''),
+    }))
+    .filter(item => item.path.length > 0 && extensionLower(item.path) === '.tsv');
+
+  const candidateFiles: { identifier: string; path: string }[] = [];
+  const prioritized = explicitTsv.filter(item => basenameLower(item.path).startsWith('twl_'));
+  (prioritized.length > 0 ? prioritized : explicitTsv).forEach(item => {
+    candidateFiles.push(item);
+  });
+
+  if (candidateFiles.length === 0) {
+    const discovered = await listLocalFilesRecursively(resource.containerPath, '', { maxDepth: 8 });
+    const tsvFiles = discovered.filter(item => extensionLower(item) === '.tsv');
+    const twlPrefixed = tsvFiles.filter(item => basenameLower(item).startsWith('twl_'));
+    (twlPrefixed.length > 0 ? twlPrefixed : tsvFiles).forEach(filePath => {
+      candidateFiles.push({
+        identifier: deriveProjectId(filePath, 'unknown'),
+        path: filePath,
+      });
+    });
+  }
+
+  const parsedFiles: ParsedBookRows<TwlTsvRow>[] = [];
+  for (const item of candidateFiles) {
+    try {
+      const absPath = path.join(resource.containerPath, item.path);
+      const text = await fs.promises.readFile(absPath, 'utf8');
+      parsedFiles.push({
+        identifier: item.identifier,
+        path: item.path,
+        rows: parseTwlTsv(text),
+      });
+    } catch {
+      // Ignore unreadable files and continue loading the rest.
+    }
+  }
+
+  return {
+    resource,
+    files: parsedFiles,
+  };
+}
+
+async function loadParsedCachedTwResource(
+  resource: CachedResource
+): Promise<LoadedCachedTwResource> {
+  const manifest = await readManifest(resource.containerPath);
+  const projects = manifest?.projects || [];
+  const projectRoots = projects.map(item => sanitizeRelativePath(item.path || '')).filter(Boolean);
+
+  const roots = projectRoots.length > 0 ? projectRoots : ['bible'];
+  const candidateFiles = new Set<string>();
+
+  for (const root of roots) {
+    if (extensionLower(root) === '.md') {
+      candidateFiles.add(root);
+      continue;
+    }
+    const files = await listLocalFilesRecursively(resource.containerPath, root, {
+      maxDepth: 8,
+    });
+    files
+      .filter(filePath => extensionLower(filePath) === '.md')
+      .forEach(filePath => candidateFiles.add(filePath));
+  }
+
+  const parsedFiles: ParsedTwArticle[] = [];
+  for (const filePath of Array.from(candidateFiles).sort()) {
+    const normalized = sanitizeRelativePath(filePath);
+    try {
+      const absPath = path.join(resource.containerPath, normalized);
+      const text = await fs.promises.readFile(absPath, 'utf8');
+      const match = normalized.match(/(?:^|\/)bible\/([^/]+)\/([^/]+)\.md$/i);
+      parsedFiles.push({
+        path: normalized,
+        category: match?.[1]?.toLowerCase(),
+        slug: match?.[2]?.toLowerCase(),
+        article: parseTwArticleMarkdown(text),
+      });
+    } catch {
+      // Ignore unreadable files and continue loading the rest.
+    }
+  }
+
+  return {
+    resource,
+    files: parsedFiles,
+  };
+}
+
+async function loadCachedSupportBundle(
+  primary: CachedResource,
+  resources: CachedResource[]
+): Promise<LoadedCachedSupportBundle> {
+  const related = findRelatedCachedResources(primary, resources);
+
+  const pickBySuffix = (suffix: string): CachedResource | null => {
+    const needle = `_${suffix}`;
+    for (const resource of related.resolved) {
+      const id = resource.id.toLowerCase();
+      if (id === suffix || id.endsWith(needle)) {
+        return resource;
+      }
+    }
+    return null;
+  };
+
+  const tnResource = pickBySuffix('tn');
+  const twlResource = pickBySuffix('twl');
+  const twResource = pickBySuffix('tw');
+
+  const [tn, twl, tw] = await Promise.all([
+    tnResource ? loadParsedCachedTnResource(tnResource) : Promise.resolve(null),
+    twlResource ? loadParsedCachedTwlResource(twlResource) : Promise.resolve(null),
+    twResource ? loadParsedCachedTwResource(twResource) : Promise.resolve(null),
+  ]);
+
+  return {
+    primary,
+    tn,
+    twl,
+    tw,
+    unresolvedRelations: related.unresolved,
+  };
+}
+
 async function loadCatalogSourceText(
   resource: CatalogResource,
   bookId?: string
@@ -788,10 +1073,15 @@ export const resourceDownloader = {
   listCatalogResources,
   buildCatalogDependencyGraph,
   findRelatedResources,
+  findRelatedCachedResources,
   loadParsedTnResource,
   loadParsedTwlResource,
   loadParsedTwResource,
   loadSupportBundle,
+  loadParsedCachedTnResource,
+  loadParsedCachedTwlResource,
+  loadParsedCachedTwResource,
+  loadCachedSupportBundle,
   loadCatalogSourceText,
   loadCachedSourceText,
 };

@@ -1,4 +1,5 @@
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const DOWNLOADER_PATH = path.join(
@@ -492,5 +493,137 @@ describe('DCS downloader integration', () => {
       path: '02-EXO.usfm',
     });
     expect(loaded.text).toContain('\\id EXO');
+  });
+
+  test('loadCachedSourceText and loadCachedSupportBundle parse local linked resources', async () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'tsdcs-cached-'));
+    const write = (relPath, content) => {
+      const absPath = path.join(tempRoot, relPath);
+      fs.mkdirSync(path.dirname(absPath), { recursive: true });
+      fs.writeFileSync(absPath, content, 'utf8');
+      return absPath;
+    };
+
+    const ultManifest = rcManifestYaml({
+      identifier: 'ult',
+      subject: 'Aligned Bible',
+      relation: ['en/tn', 'en/twl', 'en/tw'],
+      projects: [
+        { identifier: 'gen', path: '01-GEN.usfm', sort: 1 },
+        { identifier: 'exo', path: '02-EXO.usfm', sort: 2 },
+      ],
+    });
+    const tnManifest = rcManifestYaml({
+      identifier: 'tn',
+      subject: 'Translation Notes',
+      projects: [{ identifier: 'gen', path: 'tn_GEN.tsv', sort: 1 }],
+    });
+    const twlManifest = rcManifestYaml({
+      identifier: 'twl',
+      subject: 'Translation Words Links',
+      projects: [{ identifier: 'gen', path: 'twl_GEN.tsv', sort: 1 }],
+    });
+    const twManifest = rcManifestYaml({
+      identifier: 'tw',
+      subject: 'Translation Words',
+      projects: [{ identifier: 'dict', path: 'bible', sort: 1 }],
+    });
+
+    const ultPath = path.join(tempRoot, 'en_ult');
+    const tnPath = path.join(tempRoot, 'en_tn');
+    const twlPath = path.join(tempRoot, 'en_twl');
+    const twPath = path.join(tempRoot, 'en_tw');
+
+    write('en_ult/manifest.yaml', ultManifest);
+    write('en_ult/01-GEN.usfm', ['\\id GEN', '\\c 1', '\\v 1 Genesis verse'].join('\n'));
+    write('en_ult/02-EXO.usfm', ['\\id EXO', '\\c 1', '\\v 1 Exodus verse'].join('\n'));
+    write('en_tn/manifest.yaml', tnManifest);
+    write(
+      'en_tn/tn_GEN.tsv',
+      [
+        'Reference\tID\tTags\tSupportReference\tQuote\tOccurrence\tNote',
+        '1:1\tab1\tgrammar\trc://en/ta/man/translate/figs-metaphor\tδοῦλος\t1\tTN note',
+      ].join('\n')
+    );
+    write('en_twl/manifest.yaml', twlManifest);
+    write(
+      'en_twl/twl_GEN.tsv',
+      [
+        'Reference\tID\tTags\tOrigWords\tOccurrence\tTWLink',
+        '1:1\ttw1\tkt\tλόγος\t1\trc://*/tw/dict/bible/kt/faith',
+      ].join('\n')
+    );
+    write('en_tw/manifest.yaml', twManifest);
+    write(
+      'en_tw/bible/kt/faith.md',
+      ['# faith', '', '## Definition', 'Trust in God.', ''].join('\n')
+    );
+
+    const getMock = jest.fn(async () => ({
+      ok: false,
+      status: 404,
+      statusText: 'Not Found',
+      headers: {},
+      data: null,
+      error: 'network not expected',
+    }));
+
+    const downloader = loadDownloaderWithNetMock(getMock);
+    const resources = [
+      {
+        id: 'en_ult',
+        name: 'English ULT',
+        owner: 'unfoldingWord',
+        version: '1',
+        language: 'en',
+        relations: ['en/tn', 'en/twl', 'en/tw'],
+        containerPath: ultPath,
+      },
+      {
+        id: 'en_tn',
+        name: 'English TN',
+        owner: 'unfoldingWord',
+        version: '1',
+        language: 'en',
+        relations: [],
+        containerPath: tnPath,
+      },
+      {
+        id: 'en_twl',
+        name: 'English TWL',
+        owner: 'unfoldingWord',
+        version: '1',
+        language: 'en',
+        relations: [],
+        containerPath: twlPath,
+      },
+      {
+        id: 'en_tw',
+        name: 'English TW',
+        owner: 'unfoldingWord',
+        version: '1',
+        language: 'en',
+        relations: [],
+        containerPath: twPath,
+      },
+    ];
+
+    const loadedSource = await downloader.loadCachedSourceText(resources[0], 'exo');
+    expect(loadedSource).toMatchObject({
+      bookId: 'exo',
+      path: '02-EXO.usfm',
+    });
+    expect(loadedSource.text).toContain('\\id EXO');
+
+    const bundle = await downloader.loadCachedSupportBundle(resources[0], resources);
+    expect(bundle.tn).not.toBeNull();
+    expect(bundle.twl).not.toBeNull();
+    expect(bundle.tw).not.toBeNull();
+    expect(bundle.tn.files[0].rows[0].id).toBe('ab1');
+    expect(bundle.twl.files[0].rows[0].id).toBe('tw1');
+    expect(bundle.tw.files[0].slug).toBe('faith');
+    expect(bundle.unresolvedRelations).toEqual([]);
+
+    fs.rmSync(tempRoot, { recursive: true, force: true });
   });
 });
