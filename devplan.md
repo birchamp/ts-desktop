@@ -1,6 +1,6 @@
 # translationStudio Desktop Modernization Plan
 
-Last updated: 2026-02-10
+Last updated: 2026-02-11
 
 ## Objective
 
@@ -13,16 +13,20 @@ Deliver a modern Electron + React + TypeScript desktop app that behaves the same
 - `npm run type-check` passes.
 - `npm run start:safe` launches the app on macOS and reaches the main window.
 - The React app now receives `window.electronAPI` during launch.
-- New project resource listing is wired to cached resource containers in user data.
+- New project flow merges cached resource containers and Door43 catalog resources.
+- Door43 catalog discovery, manifest parsing, relation graphing, and TN/TWL/TW parsing are implemented.
+- Project context persistence is wired (book/resource/support metadata).
+- Translation screen preloads source text plus TN/TWL/TW support resources for Door43 catalog projects.
 
 Open risks still present:
 
 - Lint debt is reduced to warnings, but a warning budget policy is not yet defined.
 - Security posture is intentionally permissive (`nodeIntegration: true`, `contextIsolation: false`) while migration continues.
-- Feature parity is not yet proven with a formal workflow checklist.
+- Feature parity is not yet proven with executed workflow results (checklist exists, but entries are still `NOT RUN`).
 - Dependency risk remains high (legacy packages and known audit findings).
-- Door43 resource retrieval logic in the modern app is still local-cache centric and does not yet implement the current Catalog API + manifest content-detection workflow.
-- TN/TW/TWL handling in the modern app does not yet model current RC relations and structured TSV/Markdown linking expectations.
+- Translation workflow parity is incomplete (no verse-level navigation/editor persistence parity yet).
+- Cached-resource support-resource preloading parity (TN/TWL/TW) is not complete.
+- Basic startup smoke test is not yet scriptable/repeatable.
 
 ## Execution Strategy (Optimal Order)
 
@@ -60,6 +64,14 @@ Planned near-term branches:
 5. [x] `codex/g1-import-export-parity`
 6. [x] `codex/g1-door43-catalog-discovery`
 7. [x] `codex/g1-door43-resource-schema`
+
+Planned next branches:
+
+1. [ ] `codex/g1-translation-navigation`
+2. [ ] `codex/g1-translation-save-persistence`
+3. [ ] `codex/g1-cached-support-preload`
+4. [ ] `codex/g1-macos-parity-execution`
+5. [ ] `codex/g0-startup-smoke-script`
 
 ### Gate 0: Stabilize Build and Runtime (In Progress)
 
@@ -105,6 +117,9 @@ Door43 alignment additions (required for parity):
 - [x] Resource dependency loading follows `dublin_core.relation`.
 - [x] TN/TWL TSV parsing aligns with current column schemas and `rc://` linking.
 - [x] TW article loading supports `dict/bible/{kt,names,other}` organization.
+- [x] Project creation persists selected book/resource metadata for preload-aware translation startup.
+- [x] Translation screen preloads source + support resources for Door43 catalog-backed projects.
+- [ ] Translation screen preloads TN/TWL/TW support resources for cached/local-backed projects.
 
 ### Gate 2: Security Hardening
 
@@ -159,11 +174,11 @@ Exit criteria:
 
 ## Immediate Next Work (Recommended)
 
-1. Make CI truthful by enforcing lint failures.
-2. Add CI dependency audit visibility for high-severity vulnerabilities.
-3. Create a concrete parity checklist from legacy workflows and support docs.
-4. Validate and close obvious import/export functional gaps behind the new service layer.
-5. Add initial macOS smoke script to automate launch and core navigation checks.
+1. Execute `docs/macos-parity-checklist.md` and fill Pass/Fail notes for all Gate 1 workflows.
+2. Implement verse/chapter navigation state and book-aware pane filtering in translation workflow.
+3. Implement target editor write/save/reload persistence and validate continuity between Translate and Review.
+4. Complete cached-resource support preloading (TN/TWL/TW) for parity with Door43 catalog-backed flows.
+5. Add an initial scriptable macOS smoke test (launch + create/open + translate screen load).
 
 Progress update:
 
@@ -173,6 +188,7 @@ Progress update:
 - `codex/g1-import-export-parity` is merged to `master`.
 - `codex/g1-door43-catalog-discovery` is merged to `master`.
 - `codex/g1-door43-resource-schema` is merged to `master`.
+- Project context persistence and translate preload wiring are merged to `master`.
 
 Door43 2026 technical note:
 
