@@ -58,7 +58,7 @@ Planned near-term branches:
 3. [x] `codex/g0-ci-audit-check`
 4. [x] `codex/g1-macos-parity-checklist`
 5. [x] `codex/g1-import-export-parity`
-6. [ ] `codex/g1-door43-catalog-discovery`
+6. [x] `codex/g1-door43-catalog-discovery`
 7. [ ] `codex/g1-door43-resource-schema`
 
 ### Gate 0: Stabilize Build and Runtime (In Progress)
@@ -171,7 +171,8 @@ Progress update:
 - `codex/g0-ci-audit-check` is merged to `master`.
 - `codex/g1-macos-parity-checklist` is merged to `master`.
 - `codex/g1-import-export-parity` is merged to `master`.
-- `codex/g1-door43-catalog-discovery` is the active branch.
+- `codex/g1-door43-catalog-discovery` is merged to `master`.
+- `codex/g1-door43-resource-schema` is the active branch.
 
 Door43 2026 technical note:
 

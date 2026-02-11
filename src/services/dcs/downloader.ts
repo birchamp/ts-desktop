@@ -4,6 +4,7 @@ import yaml from 'js-yaml';
 import { getUserDataPath } from '../../utils/files';
 import { CatalogSearchParams, Door43CatalogEntry, catalogSearch } from './catalog';
 import { loadRepositoryManifest, summarizeManifest } from './manifest';
+import { DependencyGraph, buildDependencyGraph } from './resourceSchema';
 
 export interface CachedResource {
   id: string;
@@ -299,7 +300,12 @@ async function listCatalogResources(
   return resources;
 }
 
+function buildCatalogDependencyGraph(resources: CatalogResource[]): DependencyGraph {
+  return buildDependencyGraph(resources);
+}
+
 export const resourceDownloader = {
   listCached,
   listCatalogResources,
+  buildCatalogDependencyGraph,
 };
