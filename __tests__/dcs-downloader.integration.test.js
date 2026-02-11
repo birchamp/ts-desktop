@@ -432,4 +432,65 @@ describe('DCS downloader integration', () => {
     });
     expect(bundle.unresolvedRelations).toContain('en/ta');
   });
+
+  test('loadCatalogSourceText selects the requested book from manifest projects', async () => {
+    const sourceManifest = rcManifestYaml({
+      identifier: 'ult',
+      subject: 'Aligned Bible',
+      projects: [
+        { identifier: 'gen', path: '01-GEN.usfm', sort: 1 },
+        { identifier: 'exo', path: '02-EXO.usfm', sort: 2 },
+      ],
+    });
+    const exoUsfm = ['\\id EXO', '\\c 1', '\\v 1 Source verse one'].join('\n');
+
+    const getMock = createNetMock([
+      {
+        when: req =>
+          req.pathname === '/api/v1/repos/unfoldingWord/en_ult/contents' &&
+          req.params.get('ref') === 'master',
+        reply: () =>
+          createResponse([{ name: 'manifest.yaml', path: 'manifest.yaml', type: 'file' }]),
+      },
+      {
+        when: req =>
+          req.pathname === '/api/v1/repos/unfoldingWord/en_ult/contents/manifest.yaml' &&
+          req.params.get('ref') === 'master',
+        reply: () =>
+          createResponse({
+            name: 'manifest.yaml',
+            path: 'manifest.yaml',
+            type: 'file',
+            encoding: 'base64',
+            content: toBase64(sourceManifest),
+          }),
+      },
+      {
+        when: req =>
+          req.pathname === '/unfoldingWord/en_ult/raw/branch/master/02-EXO.usfm',
+        reply: () => createResponse(exoUsfm),
+      },
+    ]);
+
+    const downloader = loadDownloaderWithNetMock(getMock);
+    const loaded = await downloader.loadCatalogSourceText(
+      {
+        id: 'en_ult',
+        name: 'English ULT',
+        owner: 'unfoldingWord',
+        repo: 'en_ult',
+        version: '1',
+        language: 'en',
+        relation: [],
+        ref: 'master',
+      },
+      'exo'
+    );
+
+    expect(loaded).toMatchObject({
+      bookId: 'exo',
+      path: '02-EXO.usfm',
+    });
+    expect(loaded.text).toContain('\\id EXO');
+  });
 });

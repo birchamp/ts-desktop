@@ -63,6 +63,10 @@ interface ResourceManifest {
   target_language?: {
     id?: string;
   };
+  projects?: Array<{
+    identifier?: string;
+    path?: string;
+  }>;
 }
 
 export interface CatalogResource {
@@ -113,6 +117,20 @@ export interface LoadedSupportBundle {
   twl?: LoadedResourceRows<TwlTsvRow> | null;
   tw?: LoadedTwResource | null;
   unresolvedRelations: string[];
+}
+
+export interface LoadedCatalogSourceText {
+  resource: CatalogResource;
+  bookId: string;
+  path: string;
+  text: string;
+}
+
+export interface LoadedCachedSourceText {
+  resource: CachedResource;
+  bookId: string;
+  path: string;
+  text: string;
 }
 
 function parseOwner(manifest: ResourceManifest): string {
@@ -373,6 +391,47 @@ function deriveProjectId(relPath: string, fallback: string): string {
   return candidate.length > 0 ? candidate.toLowerCase() : fallback;
 }
 
+function normalizeBookId(bookId: string | undefined): string | undefined {
+  if (!bookId) return undefined;
+  const normalized = bookId.trim().toLowerCase();
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function matchesBookIdentifier(candidate: string | undefined, normalizedBookId: string): boolean {
+  if (!candidate) return false;
+  const normalized = candidate.trim().toLowerCase();
+  if (!normalized) return false;
+  if (normalized === normalizedBookId) return true;
+  const separatorPattern = new RegExp(`(^|[._\\-/])${normalizedBookId}([._\\-/]|$)`, 'i');
+  return separatorPattern.test(normalized);
+}
+
+function pickCandidatePath(
+  paths: string[],
+  explicitIds: Record<string, string | undefined>,
+  bookId?: string
+): { bookId: string; path: string } | null {
+  const normalizedBookId = normalizeBookId(bookId);
+  if (paths.length === 0) return null;
+
+  if (normalizedBookId) {
+    for (const pathItem of paths) {
+      const explicitId = explicitIds[pathItem];
+      if (matchesBookIdentifier(explicitId, normalizedBookId)) {
+        return { bookId: normalizedBookId, path: pathItem };
+      }
+      if (matchesBookIdentifier(path.basename(pathItem), normalizedBookId)) {
+        return { bookId: normalizedBookId, path: pathItem };
+      }
+    }
+  }
+
+  const fallbackPath = paths[0];
+  const fallbackId =
+    explicitIds[fallbackPath] || deriveProjectId(fallbackPath, normalizedBookId || 'unknown');
+  return { bookId: fallbackId, path: fallbackPath };
+}
+
 function toCatalogKey(resource: CatalogResource): string | null {
   return toResourceKey({
     id: resource.id,
@@ -606,6 +665,124 @@ async function loadSupportBundle(
   };
 }
 
+async function loadCatalogSourceText(
+  resource: CatalogResource,
+  bookId?: string
+): Promise<LoadedCatalogSourceText> {
+  const ref = resource.ref || 'master';
+  const manifest = await loadRepositoryManifest(resource.owner, resource.repo, { ref });
+  const projectEntries = listManifestProjects(manifest);
+
+  const explicitUsfm = projectEntries
+    .map(item => ({
+      identifier: item.identifier?.trim().toLowerCase(),
+      path: sanitizeRelativePath(item.path),
+    }))
+    .filter(item => {
+      const ext = extensionLower(item.path);
+      return ext === '.usfm' || ext === '.sfm' || ext === '.txt';
+    });
+
+  const explicitPathIds: Record<string, string | undefined> = {};
+  explicitUsfm.forEach(item => {
+    explicitPathIds[item.path] = item.identifier;
+  });
+  const explicitPaths = explicitUsfm.map(item => item.path);
+
+  let candidate = pickCandidatePath(explicitPaths, explicitPathIds, bookId);
+  if (!candidate) {
+    const discoveredFiles = await listFilesRecursively(resource.owner, resource.repo, ref, '', {
+      maxDepth: 6,
+    });
+    const usfmFiles = discoveredFiles.filter(filePath => {
+      const ext = extensionLower(filePath);
+      return ext === '.usfm' || ext === '.sfm' || ext === '.txt';
+    });
+    candidate = pickCandidatePath(usfmFiles, {}, bookId);
+  }
+
+  if (!candidate) {
+    throw new Error(`No source USFM found for ${resource.owner}/${resource.repo}.`);
+  }
+
+  const text = await getRawFileText(resource.owner, resource.repo, candidate.path, { ref });
+  if (!text) {
+    throw new Error(
+      `Could not load source file ${candidate.path} from ${resource.owner}/${resource.repo}.`
+    );
+  }
+
+  return {
+    resource,
+    bookId: candidate.bookId,
+    path: candidate.path,
+    text,
+  };
+}
+
+async function loadCachedSourceText(
+  resource: CachedResource,
+  bookId?: string
+): Promise<LoadedCachedSourceText> {
+  const manifest = await readManifest(resource.containerPath);
+  const projectsRaw = manifest?.projects ?? [];
+
+  const explicitUsfm: Array<{ identifier?: string; path: string }> = [];
+  projectsRaw.forEach(item => {
+    if (!item || typeof item.path !== 'string') return;
+    const cleanPath = sanitizeRelativePath(item.path);
+    const ext = extensionLower(cleanPath);
+    if (ext !== '.usfm' && ext !== '.sfm' && ext !== '.txt') return;
+    explicitUsfm.push({
+      identifier:
+        typeof item.identifier === 'string' ? item.identifier.trim().toLowerCase() : undefined,
+      path: cleanPath,
+    });
+  });
+
+  const explicitPathIds: Record<string, string | undefined> = {};
+  explicitUsfm.forEach(item => {
+    explicitPathIds[item.path] = item.identifier;
+  });
+  const explicitPaths = explicitUsfm.map(item => item.path);
+
+  let candidate = pickCandidatePath(explicitPaths, explicitPathIds, bookId);
+  if (!candidate) {
+    const discoveredFiles: string[] = [];
+    const walk = async (rootPath: string, depth: number): Promise<void> => {
+      if (depth > 8) return;
+      const entries = await fs.promises.readdir(rootPath, { withFileTypes: true });
+      for (const entry of entries) {
+        const absPath = path.join(rootPath, entry.name);
+        if (entry.isDirectory()) {
+          await walk(absPath, depth + 1);
+          continue;
+        }
+        const relPath = sanitizeRelativePath(path.relative(resource.containerPath, absPath));
+        const ext = extensionLower(relPath);
+        if (ext === '.usfm' || ext === '.sfm' || ext === '.txt') {
+          discoveredFiles.push(relPath);
+        }
+      }
+    };
+    await walk(resource.containerPath, 0);
+    candidate = pickCandidatePath(discoveredFiles, {}, bookId);
+  }
+
+  if (!candidate) {
+    throw new Error(`No source USFM found in ${resource.containerPath}.`);
+  }
+
+  const absPath = path.join(resource.containerPath, candidate.path);
+  const text = await fs.promises.readFile(absPath, 'utf8');
+  return {
+    resource,
+    bookId: candidate.bookId,
+    path: candidate.path,
+    text,
+  };
+}
+
 export const resourceDownloader = {
   listCached,
   listCatalogResources,
@@ -615,4 +792,6 @@ export const resourceDownloader = {
   loadParsedTwlResource,
   loadParsedTwResource,
   loadSupportBundle,
+  loadCatalogSourceText,
+  loadCachedSourceText,
 };
