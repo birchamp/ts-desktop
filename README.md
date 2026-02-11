@@ -36,6 +36,9 @@ The following commands are available from within the project directory:
 * `$ gulp test --grep [string]` runs the Mocha unit tests that match the string
 * `$ gulp` runs the `test` task
 * `$ npm start` runs the application (without building it)
+* `$ npm run gate:check` runs type-check, lint, dev build, and targeted integration tests.
+* `$ npm run smoke:startup` runs a timed macOS startup smoke check (override with `TS_SMOKE_TIMEOUT_MS`).
+* `$ npm run gate:macos` runs the full gate check plus smoke startup test.
 * `$ npm run pack:ta` will update the packaged tA content.
 * `$ npm run pack:rcs` will update the packaged resource containers. This will take a long time.
 
