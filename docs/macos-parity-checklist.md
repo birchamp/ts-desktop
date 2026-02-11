@@ -8,7 +8,7 @@ Status scale: `PASS`, `FAIL`, `BLOCKED`
 - Platform: macOS (current target for Gate 1).
 - Legacy reference: original `unfoldingWord-dev/ts-desktop` desktop behavior.
 - Modern reference: current `master` launched via `npm run start:safe`.
-- Execution mode for this run: non-interactive validation (startup run + code-path audit). Full click-through interaction is still required for final parity sign-off.
+- Execution mode for this run: non-interactive validation (gate scripts + startup smoke + code-path audit). Full click-through interaction is still required for final parity sign-off.
 
 ## Project Lifecycle
 
@@ -24,25 +24,25 @@ Status scale: `PASS`, `FAIL`, `BLOCKED`
 | ID | Workflow | Legacy Expected Behavior | Status | Notes |
 |---|---|---|---|---|
 | I-01 | Import USFM project | Valid USFM imports successfully and appears as usable project | BLOCKED | USFM import code path exists (`importUsfm`), but no interactive import run was executed in this checklist pass. |
-| I-02 | Import error handling | Invalid/partial USFM shows actionable error and does not crash app | FAIL | Current Home import path has no explicit user-facing actionable error state for malformed USFM; failures can silently no-op. |
-| I-03 | Export USFM project | Export creates expected files and folder structure | FAIL | Export dialog exists but is not wired from active screen flows; Print screen is currently informational only. |
-| I-04 | Backup export/import roundtrip | Backup export can be imported back with no major data loss | FAIL | Backup export/import is not implemented in modern flow (`ExportDialog` throws for backup, archive import path is TODO). |
+| I-02 | Import error handling | Invalid/partial USFM shows actionable error and does not crash app | PASS | Home import now surfaces warning notices for failed/malformed USFM imports. |
+| I-03 | Export USFM project | Export creates expected files and folder structure | BLOCKED | Export dialog is now reachable from Print screen, but file output parity has not yet been manually verified in this pass. |
+| I-04 | Backup export/import roundtrip | Backup export can be imported back with no major data loss | BLOCKED | Backup export/import service is implemented and wired, but roundtrip data-integrity verification is still pending. |
 
 ## Translation and Review
 
 | ID | Workflow | Legacy Expected Behavior | Status | Notes |
 |---|---|---|---|---|
 | T-01 | Open translation workspace | Selected project opens to translation screen with expected panes/content | PASS | Translation screen loads project context and preloads source + Door43 support resources where available. |
-| T-02 | Save translation edits | Edits persist after navigation away and app restart | FAIL | Target translation pane is still placeholder text; no editor persistence path yet. |
-| T-03 | Review workflow navigation | Review flow opens and supports expected verse/project review actions | FAIL | Review screen is currently dashboard-style placeholder content, not legacy review interaction flow. |
-| T-04 | Translation to review continuity | Data/state remains consistent when switching between screens | FAIL | No persisted translation editing state exists to carry continuity into review. |
+| T-02 | Save translation edits | Edits persist after navigation away and app restart | PASS | Verse/chapter editor state now saves to per-project draft storage and reloads on return. |
+| T-03 | Review workflow navigation | Review flow opens and supports expected verse/project review actions | FAIL | Review screen still lacks full legacy verse/project review actions. |
+| T-04 | Translation to review continuity | Data/state remains consistent when switching between screens | PASS | Shared `projectId` routing + shared draft loading maintain continuity between translate/review flows. |
 
 ## Print and Export Screen
 
 | ID | Workflow | Legacy Expected Behavior | Status | Notes |
 |---|---|---|---|---|
-| X-01 | Open Print/Export screen | Screen loads without errors and exposes expected options | PASS | Screen loads and renders static guidance/options. |
-| X-02 | Export from Print/Export flow | Export output is created and matches legacy content expectations | FAIL | Print screen does not currently trigger export actions; parity flow is incomplete. |
+| X-01 | Open Print/Export screen | Screen loads without errors and exposes expected options | PASS | Screen loads and now exposes an active export dialog entry point. |
+| X-02 | Export from Print/Export flow | Export output is created and matches legacy content expectations | BLOCKED | Print flow now opens export dialog, but manual artifact verification is still pending. |
 
 ## Settings, Profile, Updates, Legal
 
@@ -50,22 +50,22 @@ Status scale: `PASS`, `FAIL`, `BLOCKED`
 |---|---|---|---|---|
 | S-01 | Settings load | Settings screen loads and values are readable/editable | PASS | Settings screen loads and reads persisted `settings.json` when present. |
 | S-02 | Settings persistence | Changed settings persist across app restart | PASS | Save path writes `settings.json`; persistence mechanism is present. |
-| S-03 | Profile screen | Profile data loads and updates like legacy behavior | FAIL | Profile updates only local app context; no persisted profile storage parity. |
-| S-04 | Updates screen | Updates screen loads and handles update checks safely | FAIL | Updates screen is static release-note data; no active update-check workflow. |
+| S-03 | Profile screen | Profile data loads and updates like legacy behavior | PASS | Profile now reads/writes `profile.json` and updates app context from persisted state. |
+| S-04 | Updates screen | Updates screen loads and handles update checks safely | PASS | Updates screen now performs release checks against GitHub latest-release endpoint with safe error handling. |
 | S-05 | Terms/legal screen | Terms/licensing content displays correctly | PASS | Terms screen renders legal summary content without runtime dependency. |
 
 ## Academy Window
 
 | ID | Workflow | Legacy Expected Behavior | Status | Notes |
 |---|---|---|---|---|
-| A-01 | Open Academy window/content | Academy view opens and displays expected content | FAIL | Legacy academy main-process support exists, but modern React navigation does not expose a usable academy entry flow. |
-| A-02 | Academy navigation stability | Navigation in/out of academy does not destabilize main window | BLOCKED | Cannot validate stability until Academy open path is re-enabled in modern UI flow. |
+| A-01 | Open Academy window/content | Academy view opens and displays expected content | BLOCKED | Home screen now exposes Academy entry and sends `open-academy` IPC, but interactive behavior still needs validation. |
+| A-02 | Academy navigation stability | Navigation in/out of academy does not destabilize main window | BLOCKED | Academy open path is re-enabled; stability behavior still requires interactive verification. |
 
 ## Gate 1 Exit Summary
 
-- P0 blockers found: `8`
-- P1 blockers found: `5`
+- P0 blockers found: `1`
+- P1 blockers found: `8`
 - Overall Gate 1 readiness: `NOT READY`
 
 P0 blockers tracked in this run:
-- `I-03`, `I-04`, `T-02`, `T-03`, `T-04`, `X-02`, `A-01`, `S-04`
+- `T-03`

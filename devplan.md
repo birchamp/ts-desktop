@@ -1,6 +1,6 @@
 # translationStudio Desktop Modernization Plan
 
-Last updated: 2026-02-11 (smoke and gating automation branch validation complete; commit pending)
+Last updated: 2026-02-11 (macOS parity checklist rerun update in progress)
 
 ## Objective
 
@@ -48,7 +48,7 @@ Current branch implementation status (`codex/g0-smoke-and-gating-automation`):
   - `npm run gate:check` passed.
   - `npm run smoke:startup` passed.
   - `npm run gate:macos` passed.
-- Remaining risk: checklist evidence for Gate 1 workflow parity still needs to be recorded.
+- Current branch action (`codex/g1-macos-parity-rerun`): updating Gate 1 checklist evidence based on merged workflow and smoke/gating outcomes.
 
 ## Execution Strategy (Optimal Order)
 
@@ -92,8 +92,10 @@ Planned next branches:
 
 1. [x] `codex/g1-workflow-parity-ops`
    Scope: project lifecycle parity pass, import/export/print parity pass, academy entry flow, updates/profile parity closures.
-2. [ ] `codex/g0-smoke-and-gating-automation`
+2. [x] `codex/g0-smoke-and-gating-automation`
    Scope: scriptable macOS smoke run and repeatable gate-check execution support.
+3. [ ] `codex/g1-macos-parity-rerun`
+   Scope: re-run and record updated macOS Gate 1 workflow evidence after recent parity implementations.
 
 ### Gate 0: Stabilize Build and Runtime (In Progress)
 
@@ -196,9 +198,9 @@ Exit criteria:
 
 ## Immediate Next Work (Recommended)
 
-1. Commit and merge `codex/g0-smoke-and-gating-automation`.
-2. Re-run Gate 1 checklist entries for project lifecycle/import-export/print/academy/profile/updates and record pass/fail evidence.
-3. Run a full Gate 1 macOS checklist pass to confirm remaining P0/P1 status.
+1. Commit and merge `codex/g1-macos-parity-rerun`.
+2. Execute a focused branch for remaining Gate 1 FAIL item (`T-03` review workflow parity gap).
+3. Re-run full Gate 1 macOS checklist once `T-03` work is merged.
 
 Progress update:
 
@@ -212,7 +214,8 @@ Progress update:
 - Project context persistence and translate preload wiring are merged to `master`.
 - Cached/local TN/TWL/TW preload support is merged to `master`.
 - `codex/g1-workflow-parity-ops` is merged to `master`.
-- `codex/g0-smoke-and-gating-automation` is in progress with validated gate/smoke scripts; commit/merge pending.
+- `codex/g0-smoke-and-gating-automation` is merged to `master`.
+- `codex/g1-macos-parity-rerun` is in progress.
 - macOS Gate 1 checklist execution run is recorded in `docs/macos-parity-checklist.md` (current result: `NOT READY`).
 
 Door43 2026 technical note:
