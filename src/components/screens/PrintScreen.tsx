@@ -1,5 +1,6 @@
 import {
   Box,
+  Button,
   Card,
   CardContent,
   List,
@@ -12,6 +13,7 @@ import PrintIcon from '@mui/icons-material/Print';
 import DownloadIcon from '@mui/icons-material/Download';
 import ArchiveIcon from '@mui/icons-material/Archive';
 import React from 'react';
+import ExportDialog from '../dialogs/ExportDialog';
 
 const steps = [
   {
@@ -32,13 +34,20 @@ const steps = [
 ];
 
 const PrintScreen: React.FC = () => {
+  const [exportOpen, setExportOpen] = React.useState(false);
+
   return (
     <Box p={3} display='flex' flexDirection='column' gap={3}>
       <Typography variant='h5'>Print & Export</Typography>
       <Typography variant='body2' color='text.secondary'>
-        Export translations to PDF for offline distribution or printing. Full functionality will be
-        migrated from the legacy workflow in a later phase.
+        Export translations to USFM, Markdown, or backup files.
       </Typography>
+
+      <Box>
+        <Button variant='contained' onClick={() => setExportOpen(true)}>
+          Open Export Tool
+        </Button>
+      </Box>
 
       <Card>
         <CardContent>
@@ -52,6 +61,8 @@ const PrintScreen: React.FC = () => {
           </List>
         </CardContent>
       </Card>
+
+      <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
     </Box>
   );
 };

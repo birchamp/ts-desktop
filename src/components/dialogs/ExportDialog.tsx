@@ -34,6 +34,7 @@ import {
 import React, { useState, useCallback, useEffect } from 'react';
 import { generateUSFM, ProjectMeta, TranslationChunk } from '../../services/export/exporter';
 import { projectRepository, ProjectRecord } from '../../services/projectRepository';
+import { buildProjectBackup } from '../../services/backup/projectBackup';
 import { readText } from '../../utils/files';
 
 interface ExportDialogProps {
@@ -152,7 +153,9 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ open, onClose, projectId })
         content = `# ${project.name}\n\n${markdownBody}`;
         filename = `${project.name.replace(/\s+/g, '_')}.md`;
       } else {
-        throw new Error('Backup export is not implemented yet in the modern build.');
+        const backup = await buildProjectBackup(project.id);
+        content = `${JSON.stringify(backup, null, 2)}\n`;
+        filename = `${project.name.replace(/\s+/g, '_')}.tstudio`;
       }
 
       setProgress(70);

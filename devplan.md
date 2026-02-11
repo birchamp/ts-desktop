@@ -1,6 +1,6 @@
 # translationStudio Desktop Modernization Plan
 
-Last updated: 2026-02-11 (core-translation parity branch implementation in progress)
+Last updated: 2026-02-11 (workflow parity ops branch validation complete; commit pending)
 
 ## Objective
 
@@ -17,6 +17,13 @@ Deliver a modern Electron + React + TypeScript desktop app that behaves the same
 - Door43 catalog discovery, manifest parsing, relation graphing, and TN/TWL/TW parsing are implemented.
 - Project context persistence is wired (book/resource/support metadata).
 - Translation screen preloads source text plus TN/TWL/TW support resources for Door43 catalog projects.
+- Translation screen preloads source text plus TN/TWL/TW support resources for cached/local projects.
+- Workflow parity operations are wired for backup import/export, print export access, academy launch entry, profile persistence, and update checks.
+- Branch-level validation passes on `codex/g1-workflow-parity-ops`:
+  - `npm run type-check`
+  - `npm run lint` (warnings only; no errors)
+  - `npm run build:dev`
+  - `npm test -- __tests__/dcs-downloader.integration.test.js --runInBand --watchman=false`
 
 Open risks still present:
 
@@ -24,17 +31,17 @@ Open risks still present:
 - Security posture is intentionally permissive (`nodeIntegration: true`, `contextIsolation: false`) while migration continues.
 - Feature parity is not yet proven; Gate 1 checklist now has concrete FAIL/BLOCKED items and remains `NOT READY`.
 - Dependency risk remains high (legacy packages and known audit findings).
-- Translation workflow parity is incomplete (no verse-level navigation/editor persistence parity yet).
-- Cached-resource support-resource preloading parity (TN/TWL/TW) is not complete.
 - Basic startup smoke test is not yet scriptable/repeatable.
 
-Current branch implementation status (`codex/g1-core-translation-parity`):
+Current branch implementation status (`codex/g1-workflow-parity-ops`):
 
-- Verse/chapter navigation and editable target pane are implemented in `TranslationScreen`.
-- Draft save/reload persistence is implemented for project/book/chapter/verse text.
-- Translate-to-review continuity is implemented via shared `projectId` routing and shared draft data.
-- Cached-resource TN/TWL/TW preload support is implemented in downloader service.
-- Remaining risk: parity checklist evidence must be re-run and recorded for updated workflows.
+- Backup archive export and import are implemented via `projectBackup` service wiring.
+- Home screen import workflows now surface success/failure notices for USFM and backup archive paths.
+- Academy entry action is wired from Home screen (`open-academy` IPC).
+- Print screen now exposes export dialog entry.
+- Profile screen now persists profile data to `profile.json`.
+- Updates screen now performs a live latest-release check and reports result/error states.
+- Remaining risk: macOS parity checklist evidence must be re-run and recorded for these workflow areas.
 
 ## Execution Strategy (Optimal Order)
 
@@ -72,14 +79,13 @@ Planned near-term branches:
 5. [x] `codex/g1-import-export-parity`
 6. [x] `codex/g1-door43-catalog-discovery`
 7. [x] `codex/g1-door43-resource-schema`
+8. [x] `codex/g1-core-translation-parity`
 
 Planned next branches:
 
-1. [ ] `codex/g1-core-translation-parity`
-   Scope: translation navigation, target save/reload persistence, review continuity, cached-resource TN/TWL/TW preload parity.
-2. [ ] `codex/g1-workflow-parity-ops`
+1. [ ] `codex/g1-workflow-parity-ops`
    Scope: project lifecycle parity pass, import/export/print parity pass, academy entry flow, updates/profile parity closures.
-3. [ ] `codex/g0-smoke-and-gating-automation`
+2. [ ] `codex/g0-smoke-and-gating-automation`
    Scope: scriptable macOS smoke run and repeatable gate-check execution support.
 
 ### Gate 0: Stabilize Build and Runtime (In Progress)
@@ -128,7 +134,7 @@ Door43 alignment additions (required for parity):
 - [x] TW article loading supports `dict/bible/{kt,names,other}` organization.
 - [x] Project creation persists selected book/resource metadata for preload-aware translation startup.
 - [x] Translation screen preloads source + support resources for Door43 catalog-backed projects.
-- [ ] Translation screen preloads TN/TWL/TW support resources for cached/local-backed projects.
+- [x] Translation screen preloads TN/TWL/TW support resources for cached/local-backed projects.
 
 ### Gate 2: Security Hardening
 
@@ -183,10 +189,10 @@ Exit criteria:
 
 ## Immediate Next Work (Recommended)
 
-1. Execute `codex/g1-core-translation-parity` as one branch and close all translation/review P0 parity gaps together.
-2. Re-run Gate 1 checklist entries for translation/review on this branch and record updated pass/fail evidence.
-3. Execute `codex/g1-workflow-parity-ops` as one branch and close project/import/export/academy/update parity gaps together.
-4. Execute `codex/g0-smoke-and-gating-automation` to make startup and gate checks scriptable/repeatable.
+1. Commit and merge `codex/g1-workflow-parity-ops` after final branch validation capture.
+2. Re-run Gate 1 checklist entries for project lifecycle/import-export/print/academy/profile/updates and record pass/fail evidence.
+3. Execute `codex/g0-smoke-and-gating-automation` to make startup and gate checks scriptable/repeatable.
+4. After smoke automation is in place, run a full Gate 1 macOS checklist pass to confirm remaining P0/P1 status.
 
 Progress update:
 
@@ -196,7 +202,10 @@ Progress update:
 - `codex/g1-import-export-parity` is merged to `master`.
 - `codex/g1-door43-catalog-discovery` is merged to `master`.
 - `codex/g1-door43-resource-schema` is merged to `master`.
+- `codex/g1-core-translation-parity` is merged to `master`.
 - Project context persistence and translate preload wiring are merged to `master`.
+- Cached/local TN/TWL/TW preload support is merged to `master`.
+- `codex/g1-workflow-parity-ops` implementation is complete on branch and passes validation; commit/merge pending.
 - macOS Gate 1 checklist execution run is recorded in `docs/macos-parity-checklist.md` (current result: `NOT READY`).
 
 Door43 2026 technical note:

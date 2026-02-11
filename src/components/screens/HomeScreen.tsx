@@ -1,4 +1,5 @@
 import {
+  Alert,
   Box,
   Button,
   Card,
@@ -11,7 +12,7 @@ import {
   ListItemText,
   Typography,
 } from '@mui/material';
-import { Add, Delete, PlayArrow, Upload } from '@mui/icons-material';
+import { Add, Delete, MenuBook, PlayArrow, Upload } from '@mui/icons-material';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../contexts/AppContext';
@@ -20,13 +21,19 @@ import {
   RecentProjectRecord as RecentProject,
   ProjectRecord,
 } from '../../services/projectRepository';
+import { importProjectBackup } from '../../services/backup/projectBackup';
 import { openFile } from '../../utils/dialog';
 import { importUsfm } from '../../utils/import/usfm';
+import { send } from '../../utils/ipc';
 
 const HomeScreen: React.FC = () => {
   const { state, setAppLoaded } = useApp();
   const [recents, setRecents] = React.useState<RecentProject[]>([]);
   const [dbProjects, setDbProjects] = React.useState<ProjectRecord[]>([]);
+  const [notice, setNotice] = React.useState<{
+    severity: 'success' | 'warning';
+    text: string;
+  } | null>(null);
   const navigate = useNavigate();
 
   // Mark app as loaded when component mounts
@@ -55,6 +62,7 @@ const HomeScreen: React.FC = () => {
   };
 
   const handleImportProject = async () => {
+    setNotice(null);
     const res = await openFile([
       {
         name: 'USFM or Project Archive',
@@ -64,24 +72,30 @@ const HomeScreen: React.FC = () => {
     if (res.canceled || !res.filePaths.length) return;
     const filePath = res.filePaths[0];
     if (/\.(usfm|sfm|txt)$/i.test(filePath)) {
-      await importUsfm(filePath, 'en');
-      await refresh();
+      const imported = await importUsfm(filePath, 'en');
+      if (imported) {
+        setNotice({ severity: 'success', text: `Imported ${imported.name}.` });
+        await refresh();
+      } else {
+        setNotice({
+          severity: 'warning',
+          text: 'Import failed: file could not be read or parsed.',
+        });
+      }
     } else {
-      const fileName = filePath.split(/[\\/]/).pop() || 'Imported Project';
-      const baseName = fileName.replace(/\.(zip|tsproj|tstudio)$/i, '');
-      const id = Date.now().toString();
-      await projectRepository.createProject(
-        {
-          id,
-          name: baseName,
-          type: 'translation',
-          language: 'en',
-          progress: 0,
-          lastModified: Date.now(),
-        },
-        { recordRecent: true }
-      );
-      await refresh();
+      try {
+        const restored = await importProjectBackup(filePath);
+        setNotice({
+          severity: 'success',
+          text: `Imported backup as ${restored.projectName}.`,
+        });
+        await refresh();
+      } catch (e) {
+        setNotice({
+          severity: 'warning',
+          text: e instanceof Error ? e.message : 'Backup import failed.',
+        });
+      }
     }
   };
 
@@ -102,6 +116,16 @@ const HomeScreen: React.FC = () => {
       await refresh();
     }
     navigate(`/translate?projectId=${encodeURIComponent(projectId)}`);
+  };
+
+  const handleOpenAcademy = () => {
+    const ok = send('open-academy', { lang: 'en' });
+    if (!ok) {
+      setNotice({
+        severity: 'warning',
+        text: 'Could not open Academy window in this runtime context.',
+      });
+    }
   };
 
   return (
@@ -135,6 +159,18 @@ const HomeScreen: React.FC = () => {
           </Button>
           <Button
             variant='outlined'
+            onClick={handleOpenAcademy}
+            style={{
+              borderColor: 'white',
+              color: 'white',
+              marginRight: 12,
+            }}
+          >
+            <MenuBook style={{ marginRight: 8 }} />
+            Academy
+          </Button>
+          <Button
+            variant='outlined'
             onClick={handleImportProject}
             style={{
               borderColor: 'white',
@@ -148,6 +184,15 @@ const HomeScreen: React.FC = () => {
 
       {/* Main Content */}
       <Box style={{ flex: 1, padding: '30px', display: 'flex', flexDirection: 'column' }}>
+        {notice && (
+          <Alert
+            severity={notice.severity}
+            sx={{ mb: 2, maxWidth: 800, alignSelf: 'center', width: '100%' }}
+          >
+            {notice.text}
+          </Alert>
+        )}
+
         {/* Welcome Card */}
         <Card style={{ maxWidth: 600, marginBottom: '30px', alignSelf: 'center' }}>
           <CardContent style={{ textAlign: 'center', padding: '30px' }}>
