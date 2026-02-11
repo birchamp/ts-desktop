@@ -21,6 +21,8 @@ Open risks still present:
 - Security posture is intentionally permissive (`nodeIntegration: true`, `contextIsolation: false`) while migration continues.
 - Feature parity is not yet proven with a formal workflow checklist.
 - Dependency risk remains high (legacy packages and known audit findings).
+- Door43 resource retrieval logic in the modern app is still local-cache centric and does not yet implement the current Catalog API + manifest content-detection workflow.
+- TN/TW/TWL handling in the modern app does not yet model current RC relations and structured TSV/Markdown linking expectations.
 
 ## Execution Strategy (Optimal Order)
 
@@ -55,7 +57,9 @@ Planned near-term branches:
 2. [x] `codex/g0-ci-lint-blocking`
 3. [x] `codex/g0-ci-audit-check`
 4. [x] `codex/g1-macos-parity-checklist`
-5. [ ] `codex/g1-import-export-parity`
+5. [x] `codex/g1-import-export-parity`
+6. [ ] `codex/g1-door43-catalog-discovery`
+7. [ ] `codex/g1-door43-resource-schema`
 
 ### Gate 0: Stabilize Build and Runtime (In Progress)
 
@@ -90,9 +94,17 @@ Scope:
 
 Exit criteria:
 
-- [ ] Parity checklist exists and is versioned in repo.
+- [x] Parity checklist exists and is versioned in repo.
 - [ ] Each macOS workflow marked Pass/Fail with notes.
 - [ ] No P0/P1 functional regressions against legacy behavior.
+
+Door43 alignment additions (required for parity):
+
+- [ ] Resource discovery uses Catalog API (`/api/v1/catalog/search`) with `stage=prod`, plus subject/language/owner filtering.
+- [ ] Manifest processing is content-structure based (not file-extension based), supporting RC and tool-generated formats.
+- [ ] Resource dependency loading follows `dublin_core.relation`.
+- [ ] TN/TWL TSV parsing aligns with current column schemas and `rc://` linking.
+- [ ] TW article loading supports `dict/bible/{kt,names,other}` organization.
 
 ### Gate 2: Security Hardening
 
@@ -158,7 +170,12 @@ Progress update:
 - `codex/g0-lint-remediation` and `codex/g0-ci-lint-blocking` are merged to `master`.
 - `codex/g0-ci-audit-check` is merged to `master`.
 - `codex/g1-macos-parity-checklist` is merged to `master`.
-- `codex/g1-import-export-parity` is the active branch.
+- `codex/g1-import-export-parity` is merged to `master`.
+- `codex/g1-door43-catalog-discovery` is the active branch.
+
+Door43 2026 technical note:
+
+- New implementation work must follow the current uW Tooling guides for resource structure and Door43 API workflows.
 
 ## Decision Log
 
