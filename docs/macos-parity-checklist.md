@@ -8,25 +8,25 @@ Status scale: `PASS`, `FAIL`, `BLOCKED`
 - Platform: macOS (current target for Gate 1).
 - Legacy reference: original `unfoldingWord-dev/ts-desktop` desktop behavior.
 - Modern reference: current `master` launched via `npm run start:safe`.
-- Execution mode for this run: non-interactive validation (gate scripts + startup smoke + code-path audit). Full click-through interaction is still required for final parity sign-off.
+- Execution mode for this run: hybrid validation (gate scripts + startup smoke + code-path audit + targeted integration tests). Full click-through interaction is still required for final parity sign-off of UI-driven workflows.
 
 ## Project Lifecycle
 
 | ID | Workflow | Legacy Expected Behavior | Status | Notes |
 |---|---|---|---|---|
-| P-01 | Create project from Home/New Project flow | Project is created and appears in project list without restart | BLOCKED | Create flow writes project + context and navigates to translate, but this run did not execute interactive click-through verification. |
-| P-02 | Open existing project | Existing project opens to expected working screen | BLOCKED | Home open action routes to `/translate?projectId=...` and loads context, but interactive validation is still pending. |
-| P-03 | Recent projects list | Recent entries update after open/create and can be reopened | BLOCKED | `recordRecent` is wired in create/open paths, but UI-level behavior has not been manually executed in this run. |
-| P-04 | Delete/remove project | Project removal updates list and does not corrupt remaining entries | BLOCKED | Delete path is implemented through `projectRepository.deleteProject`, but list integrity still needs interactive verification. |
+| P-01 | Create project from Home/New Project flow | Project is created and appears in project list without restart | BLOCKED | Repository create + context persistence path is now covered in `__tests__/macos-parity-evidence.integration.test.js`; UI click-through validation is still pending. |
+| P-02 | Open existing project | Existing project opens to expected working screen | BLOCKED | Open/read path is covered at repository level in `__tests__/macos-parity-evidence.integration.test.js`, but screen-level navigation still needs manual validation. |
+| P-03 | Recent projects list | Recent entries update after open/create and can be reopened | BLOCKED | `recordRecent`/`listRecentProjects` behavior is now covered by integration evidence; Home screen interaction verification remains pending. |
+| P-04 | Delete/remove project | Project removal updates list and does not corrupt remaining entries | BLOCKED | Delete behavior is covered in integration evidence, but UI list integrity after delete still requires manual verification. |
 
 ## Import and Export
 
 | ID | Workflow | Legacy Expected Behavior | Status | Notes |
 |---|---|---|---|---|
-| I-01 | Import USFM project | Valid USFM imports successfully and appears as usable project | BLOCKED | USFM import code path exists (`importUsfm`), but no interactive import run was executed in this checklist pass. |
+| I-01 | Import USFM project | Valid USFM imports successfully and appears as usable project | PASS | Automated integration test now validates `importUsfm` end-to-end with project + asset persistence (`__tests__/macos-parity-evidence.integration.test.js`). |
 | I-02 | Import error handling | Invalid/partial USFM shows actionable error and does not crash app | PASS | Home import now surfaces warning notices for failed/malformed USFM imports. |
 | I-03 | Export USFM project | Export creates expected files and folder structure | BLOCKED | Export dialog is now reachable from Print screen, but file output parity has not yet been manually verified in this pass. |
-| I-04 | Backup export/import roundtrip | Backup export can be imported back with no major data loss | BLOCKED | Backup export/import service is implemented and wired, but roundtrip data-integrity verification is still pending. |
+| I-04 | Backup export/import roundtrip | Backup export can be imported back with no major data loss | PASS | Automated integration test now validates backup roundtrip including translation draft and review draft restoration (`__tests__/macos-parity-evidence.integration.test.js`). |
 
 ## Translation and Review
 

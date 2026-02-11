@@ -121,7 +121,7 @@
         "test:watch": "jest --watch",
         "test:coverage": "jest --coverage",
         "type-check": "tsc --noEmit",
-        "gate:check": "npm run type-check && npm run lint && npm run build:dev && npm test -- __tests__/dcs-downloader.integration.test.js --runInBand --watchman=false",
+        "gate:check": "npm run type-check && npm run lint && npm run build:dev && npm test -- __tests__/dcs-downloader.integration.test.js __tests__/macos-parity-evidence.integration.test.js --runInBand --watchman=false",
         "smoke:startup": "node scripts/smoke-startup.js",
         "gate:macos": "npm run gate:check && npm run smoke:startup",
         "setup:hooks": "node scripts/install-hooks.js",

@@ -1,6 +1,6 @@
 # translationStudio Desktop Modernization Plan
 
-Last updated: 2026-02-11 (review workflow parity branch implementation in progress)
+Last updated: 2026-02-11 (click-through evidence automation branch in progress)
 
 ## Objective
 
@@ -25,29 +25,29 @@ Deliver a modern Electron + React + TypeScript desktop app that behaves the same
   - `npm run gate:check`
   - `npm run smoke:startup`
   - `npm run gate:macos`
-- Branch-level validation passes on `codex/g1-workflow-parity-ops`:
-  - `npm run type-check`
-  - `npm run lint` (warnings only; no errors)
-  - `npm run build:dev`
-  - `npm test -- __tests__/dcs-downloader.integration.test.js --runInBand --watchman=false`
+- Gate validation now includes both downloader coverage and parity-evidence coverage:
+  - `npm run gate:check` runs:
+    - `npm run type-check`
+    - `npm run lint` (warnings only; no errors)
+    - `npm run build:dev`
+    - `npm test -- __tests__/dcs-downloader.integration.test.js __tests__/macos-parity-evidence.integration.test.js --runInBand --watchman=false`
 
 Open risks still present:
 
 - Lint debt is reduced to warnings, but a warning budget policy is not yet defined.
 - Security posture is intentionally permissive (`nodeIntegration: true`, `contextIsolation: false`) while migration continues.
-- Feature parity is not yet proven; Gate 1 checklist now has concrete FAIL/BLOCKED items and remains `NOT READY`.
+- Feature parity is not yet proven; Gate 1 checklist still has remaining `BLOCKED` workflows and remains `NOT READY`.
 - Dependency risk remains high (legacy packages and known audit findings).
 
-Current branch implementation status (`codex/g1-review-workflow-parity`):
+Current branch implementation status (`codex/g1-clickthrough-evidence-automation`):
 
-- Added review draft service (`src/services/reviewDrafts.ts`) with load/save/upsert/list/summarize helpers.
-- Upgraded `ReviewScreen` to support:
-  - chapter selection and verse queue navigation
-  - per-verse review status updates (`approved`, `needs-work`, `pending`)
-  - reviewer note editing with persistence to `review-draft.json`
-  - project-level review summary chips (approved / needs-work / pending)
-- Extended backup export/import flow to include review draft payload.
-- Updated Gate 1 checklist evidence to move review workflow from `FAIL` to `BLOCKED` pending interactive sign-off.
+- Added targeted integration evidence file `__tests__/macos-parity-evidence.integration.test.js` that verifies:
+  - project lifecycle repository behavior (create/open/recent/delete)
+  - USFM import success/failure behavior
+  - backup export/import roundtrip including translation + review draft restoration
+- Updated `gate:check` command to include parity-evidence integration tests.
+- Updated Gate 1 checklist notes/statuses using new automated evidence (I-01 and I-04 moved to `PASS`).
+- Remaining gap: UI click-through verification is still required for workflow entries that remain `BLOCKED`.
 
 ## Execution Strategy (Optimal Order)
 
@@ -95,8 +95,10 @@ Planned next branches:
    Scope: scriptable macOS smoke run and repeatable gate-check execution support.
 3. [x] `codex/g1-macos-parity-rerun`
    Scope: re-run and record updated macOS Gate 1 workflow evidence after recent parity implementations.
-4. [ ] `codex/g1-review-workflow-parity`
+4. [x] `codex/g1-review-workflow-parity`
    Scope: close review workflow parity gap with actionable review queue behavior and persisted review outcomes.
+5. [ ] `codex/g1-clickthrough-evidence-automation`
+   Scope: strengthen Gate 1 evidence with targeted automation and reduce manual-only verification surface.
 
 ### Gate 0: Stabilize Build and Runtime (Complete)
 
@@ -199,7 +201,7 @@ Exit criteria:
 
 ## Immediate Next Work (Recommended)
 
-1. Commit and merge `codex/g1-review-workflow-parity`.
+1. Commit and merge `codex/g1-clickthrough-evidence-automation`.
 2. Re-run Gate 1 macOS checklist with interactive click-through for remaining `BLOCKED` workflows.
 3. Confirm Gate 1 exit criterion (`No P0/P1 regressions`) from interactive evidence; if satisfied, advance to Gate 2.
 
@@ -217,7 +219,8 @@ Progress update:
 - `codex/g1-workflow-parity-ops` is merged to `master`.
 - `codex/g0-smoke-and-gating-automation` is merged to `master`.
 - `codex/g1-macos-parity-rerun` is merged to `master`.
-- `codex/g1-review-workflow-parity` is in progress.
+- `codex/g1-review-workflow-parity` is merged to `master`.
+- `codex/g1-clickthrough-evidence-automation` is in progress.
 - macOS Gate 1 checklist execution run is recorded in `docs/macos-parity-checklist.md` (current result: `NOT READY`).
 
 Door43 2026 technical note:
