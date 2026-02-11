@@ -15,7 +15,6 @@ import {
   Grid,
   InputLabel,
   List,
-  ListItem,
   ListItemButton,
   ListItemIcon,
   ListItemText,
@@ -29,11 +28,16 @@ import {
 } from '@mui/material';
 import { ArrowBack, ArrowForward, Check, CloudDownload, MenuBook, Save } from '@mui/icons-material';
 import { SelectChangeEvent } from '@mui/material/Select';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../contexts/AppContext';
 import { projectRepository } from '../../services/projectRepository';
-import { resourceDownloader, CachedResource } from '../../services/dcs/downloader';
+import { resourceDownloader } from '../../services/dcs/downloader';
+import type {
+  CachedResource,
+  CatalogResource,
+  LoadedSupportBundle,
+} from '../../services/dcs/downloader';
 
 // ============================================================================
 // Types
@@ -43,6 +47,18 @@ interface BookInfo {
   id: string;
   name: string;
   testament: 'OT' | 'NT';
+}
+
+interface SelectableResource {
+  key: string;
+  id: string;
+  name: string;
+  owner: string;
+  version: string;
+  language?: string;
+  source: 'cached' | 'catalog';
+  cached?: CachedResource;
+  catalog?: CatalogResource;
 }
 
 // ============================================================================
@@ -147,12 +163,18 @@ const NewProjectScreen: React.FC = () => {
   const [activeStep, setActiveStep] = useState(0);
 
   // Form state
-  const [availableResources, setAvailableResources] = useState<CachedResource[]>([]);
-  const [selectedResource, setSelectedResource] = useState<CachedResource | null>(null);
+  const [availableResources, setAvailableResources] = useState<SelectableResource[]>([]);
+  const [selectedResource, setSelectedResource] = useState<SelectableResource | null>(null);
+  const [loadingResources, setLoadingResources] = useState(false);
+  const [resourceError, setResourceError] = useState<string | null>(null);
+  const [supportBundle, setSupportBundle] = useState<LoadedSupportBundle | null>(null);
+  const [loadingSupport, setLoadingSupport] = useState(false);
+  const [supportError, setSupportError] = useState<string | null>(null);
   const [selectedBook, setSelectedBook] = useState<BookInfo | null>(null);
   const [projectName, setProjectName] = useState('');
   const [targetLanguage, setTargetLanguage] = useState('en');
   const [description, setDescription] = useState('');
+  const supportCacheRef = useRef<Record<string, LoadedSupportBundle>>({});
 
   // Load resources on mount
   useEffect(() => {
@@ -168,13 +190,136 @@ const NewProjectScreen: React.FC = () => {
   }, [selectedBook, targetLanguage]);
 
   const loadResources = useCallback(async () => {
-    try {
-      const resources = await resourceDownloader.listCached();
-      setAvailableResources(resources);
-    } catch (e) {
-      console.error('Failed to load resources:', e);
+    setLoadingResources(true);
+    setResourceError(null);
+
+    const [cachedResult, catalogResult] = await Promise.allSettled([
+      resourceDownloader.listCached(),
+      resourceDownloader.listCatalogResources({
+        subject: 'Aligned Bible',
+        stage: 'prod',
+      }),
+    ]);
+
+    const cachedResources = cachedResult.status === 'fulfilled' ? cachedResult.value : [];
+    const catalogResources = catalogResult.status === 'fulfilled' ? catalogResult.value : [];
+
+    const mergedResources: SelectableResource[] = [
+      ...cachedResources.map(resource => ({
+        key: `cached:${resource.id}:${resource.containerPath}`,
+        id: resource.id,
+        name: resource.name,
+        owner: resource.owner,
+        version: resource.version,
+        language: resource.language,
+        source: 'cached' as const,
+        cached: resource,
+      })),
+      ...catalogResources.map(resource => ({
+        key: `catalog:${resource.owner}/${resource.repo}`,
+        id: resource.id,
+        name: resource.name,
+        owner: resource.owner,
+        version: resource.version,
+        language: resource.language,
+        source: 'catalog' as const,
+        catalog: resource,
+      })),
+    ].sort((a, b) => {
+      if (a.source !== b.source) {
+        return a.source === 'cached' ? -1 : 1;
+      }
+      return a.name.localeCompare(b.name);
+    });
+
+    setAvailableResources(mergedResources);
+    setSelectedResource(current => {
+      if (current) {
+        const next = mergedResources.find(resource => resource.key === current.key);
+        if (next) return next;
+      }
+      return mergedResources.length > 0 ? mergedResources[0] : null;
+    });
+
+    if (cachedResult.status === 'rejected' && catalogResult.status === 'rejected') {
+      setResourceError('Could not load cached or Door43 catalog resources.');
+    } else if (catalogResult.status === 'rejected') {
+      setResourceError('Loaded cached resources, but Door43 catalog is unavailable.');
+    } else if (cachedResult.status === 'rejected') {
+      setResourceError('Loaded Door43 resources, but local cache could not be read.');
     }
+
+    setLoadingResources(false);
   }, []);
+
+  useEffect(() => {
+    if (!selectedResource || selectedResource.source !== 'catalog' || !selectedResource.catalog) {
+      setSupportBundle(null);
+      setSupportError(null);
+      setLoadingSupport(false);
+      return;
+    }
+
+    const selectedCatalog = selectedResource.catalog;
+    const cacheKey = selectedResource.key;
+    const cachedBundle = supportCacheRef.current[cacheKey];
+    if (cachedBundle) {
+      setSupportBundle(cachedBundle);
+      setSupportError(null);
+      return;
+    }
+
+    let cancelled = false;
+    const loadSupportBundle = async () => {
+      setLoadingSupport(true);
+      setSupportError(null);
+      try {
+        const language = selectedCatalog.language;
+        const supportResources = await resourceDownloader.listCatalogResources(
+          language ? { lang: language, stage: 'prod' } : { stage: 'prod' }
+        );
+        const bundle = await resourceDownloader.loadSupportBundle(
+          selectedCatalog,
+          supportResources
+        );
+        if (cancelled) return;
+        supportCacheRef.current[cacheKey] = bundle;
+        setSupportBundle(bundle);
+      } catch (e) {
+        if (cancelled) return;
+        setSupportBundle(null);
+        setSupportError(e instanceof Error ? e.message : 'Failed to analyze support resources.');
+      } finally {
+        if (!cancelled) {
+          setLoadingSupport(false);
+        }
+      }
+    };
+
+    loadSupportBundle();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedResource]);
+
+  const supportSummary = useMemo(() => {
+    if (!supportBundle) return null;
+
+    const tnRows = supportBundle.tn
+      ? supportBundle.tn.files.reduce((sum, file) => sum + file.rows.length, 0)
+      : 0;
+    const twlRows = supportBundle.twl
+      ? supportBundle.twl.files.reduce((sum, file) => sum + file.rows.length, 0)
+      : 0;
+    const twArticles = supportBundle.tw ? supportBundle.tw.files.length : 0;
+
+    return {
+      tnRows,
+      twlRows,
+      twArticles,
+      unresolved: supportBundle.unresolvedRelations.length,
+    };
+  }, [supportBundle]);
 
   const handleNext = () => {
     setActiveStep(prev => prev + 1);
@@ -240,9 +385,21 @@ const NewProjectScreen: React.FC = () => {
   const renderResourceStep = () => (
     <Box>
       <Typography variant='body1' color='text.secondary' sx={{ mb: 3 }}>
-        Select a downloaded resource to use as the source text for your translation. If you haven't
-        downloaded any resources yet, you can still create a project.
+        Select a source resource for your translation. Cached resources are listed first, followed
+        by live Door43 catalog resources.
       </Typography>
+
+      {resourceError && (
+        <Alert severity='warning' sx={{ mb: 2 }}>
+          {resourceError}
+        </Alert>
+      )}
+
+      {loadingResources && (
+        <Alert severity='info' sx={{ mb: 2 }}>
+          Loading cached and Door43 resources...
+        </Alert>
+      )}
 
       {availableResources.length === 0 ? (
         <Alert
@@ -254,29 +411,64 @@ const NewProjectScreen: React.FC = () => {
             </Button>
           }
         >
-          No resources downloaded yet. Download resources for word-level alignment and translation
-          notes.
+          No resources available right now. You can still continue in demo mode, or download local
+          resources.
         </Alert>
       ) : (
         <List>
           {availableResources.map(resource => (
             <ListItemButton
-              key={resource.id}
-              selected={selectedResource?.id === resource.id}
+              key={resource.key}
+              selected={selectedResource?.key === resource.key}
               onClick={() => setSelectedResource(resource)}
               sx={{ borderRadius: 1, mb: 1 }}
             >
               <ListItemIcon>
-                <MenuBook color={selectedResource?.id === resource.id ? 'primary' : 'action'} />
+                <MenuBook color={selectedResource?.key === resource.key ? 'primary' : 'action'} />
               </ListItemIcon>
               <ListItemText
                 primary={resource.name}
-                secondary={`${resource.owner} • v${resource.version}`}
+                secondary={`${resource.owner} • v${resource.version} • ${
+                  resource.source === 'cached' ? 'Cached' : 'Door43'
+                }${resource.language ? ` • ${resource.language}` : ''}`}
               />
-              {selectedResource?.id === resource.id && <Check color='primary' />}
+              {selectedResource?.key === resource.key && <Check color='primary' />}
             </ListItemButton>
           ))}
         </List>
+      )}
+
+      {selectedResource?.source === 'catalog' && (
+        <Box sx={{ mt: 2 }}>
+          {loadingSupport && (
+            <Alert severity='info' sx={{ mb: 1 }}>
+              Resolving linked support resources (TN/TWL/TW)...
+            </Alert>
+          )}
+
+          {supportError && (
+            <Alert severity='warning' sx={{ mb: 1 }}>
+              {supportError}
+            </Alert>
+          )}
+
+          {supportSummary && (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              <Chip label={`TN rows: ${supportSummary.tnRows}`} size='small' color='primary' />
+              <Chip label={`TWL rows: ${supportSummary.twlRows}`} size='small' color='primary' />
+              <Chip
+                label={`TW articles: ${supportSummary.twArticles}`}
+                size='small'
+                color='primary'
+              />
+              <Chip
+                label={`Unresolved relations: ${supportSummary.unresolved}`}
+                size='small'
+                variant='outlined'
+              />
+            </Box>
+          )}
+        </Box>
       )}
 
       {availableResources.length > 0 && !selectedResource && (
@@ -399,13 +591,27 @@ const NewProjectScreen: React.FC = () => {
         Project Summary
       </Typography>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-        {selectedResource && <Chip label={`Resource: ${selectedResource.name}`} size='small' />}
+        {selectedResource && (
+          <Chip
+            label={`Resource: ${selectedResource.name} (${
+              selectedResource.source === 'cached' ? 'Cached' : 'Door43'
+            })`}
+            size='small'
+          />
+        )}
         {selectedBook && <Chip label={`Book: ${selectedBook.name}`} size='small' color='primary' />}
         <Chip
           label={`Language: ${LANGUAGES.find(l => l.code === targetLanguage)?.name}`}
           size='small'
         />
         <Chip label='Format: DCS' size='small' variant='outlined' />
+        {supportSummary && selectedResource?.source === 'catalog' && (
+          <Chip
+            label={`Support bundle: TN ${supportSummary.tnRows}, TWL ${supportSummary.twlRows}, TW ${supportSummary.twArticles}`}
+            size='small'
+            variant='outlined'
+          />
+        )}
       </Box>
     </Box>
   );
