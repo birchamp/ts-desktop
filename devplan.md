@@ -22,8 +22,7 @@ Open risks still present:
 
 - Lint debt is reduced to warnings, but a warning budget policy is not yet defined.
 - Security posture is intentionally permissive (`nodeIntegration: true`, `contextIsolation: false`) while migration continues.
-- Feature parity is not yet proven with executed workflow results (checklist exists, but entries are still `NOT RUN`).
-- Gate 1 checklist execution identified multiple P0/P1 blockers; Gate 1 remains `NOT READY`.
+- Feature parity is not yet proven; Gate 1 checklist now has concrete FAIL/BLOCKED items and remains `NOT READY`.
 - Dependency risk remains high (legacy packages and known audit findings).
 - Translation workflow parity is incomplete (no verse-level navigation/editor persistence parity yet).
 - Cached-resource support-resource preloading parity (TN/TWL/TW) is not complete.
@@ -35,7 +34,7 @@ This is a gate-based plan. We do not advance to the next gate until the current 
 
 ## Branching Strategy
 
-Use short-lived, goal-specific branches and merge only after gate checks pass.
+Use higher-level outcome branches. Each branch should close a related set of tasks (typically 2-5 checklist items), not just one small change.
 
 Branch model:
 
@@ -48,7 +47,7 @@ Branch model:
 
 Merge rules:
 
-- One objective per branch.
+- One outcome theme per branch (multi-step, related scope).
 - Rebase or merge latest `master` before final validation.
 - Required pre-merge checks for every branch:
   - `npm run type-check`
@@ -68,11 +67,12 @@ Planned near-term branches:
 
 Planned next branches:
 
-1. [ ] `codex/g1-translation-navigation`
-2. [ ] `codex/g1-translation-save-persistence`
-3. [ ] `codex/g1-cached-support-preload`
-4. [ ] `codex/g1-macos-parity-execution`
-5. [ ] `codex/g0-startup-smoke-script`
+1. [ ] `codex/g1-core-translation-parity`
+   Scope: translation navigation, target save/reload persistence, review continuity, cached-resource TN/TWL/TW preload parity.
+2. [ ] `codex/g1-workflow-parity-ops`
+   Scope: project lifecycle parity pass, import/export/print parity pass, academy entry flow, updates/profile parity closures.
+3. [ ] `codex/g0-smoke-and-gating-automation`
+   Scope: scriptable macOS smoke run and repeatable gate-check execution support.
 
 ### Gate 0: Stabilize Build and Runtime (In Progress)
 
@@ -175,11 +175,9 @@ Exit criteria:
 
 ## Immediate Next Work (Recommended)
 
-1. Execute `docs/macos-parity-checklist.md` and fill Pass/Fail notes for all Gate 1 workflows.
-2. Implement verse/chapter navigation state and book-aware pane filtering in translation workflow.
-3. Implement target editor write/save/reload persistence and validate continuity between Translate and Review.
-4. Complete cached-resource support preloading (TN/TWL/TW) for parity with Door43 catalog-backed flows.
-5. Add an initial scriptable macOS smoke test (launch + create/open + translate screen load).
+1. Execute `codex/g1-core-translation-parity` as one branch and close all translation/review P0 parity gaps together.
+2. Execute `codex/g1-workflow-parity-ops` as one branch and close project/import/export/academy/update parity gaps together.
+3. Execute `codex/g0-smoke-and-gating-automation` to make startup and gate checks scriptable/repeatable.
 
 Progress update:
 
