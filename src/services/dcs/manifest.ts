@@ -24,6 +24,13 @@ export interface ManifestSummary {
   relations: string[];
 }
 
+export interface ManifestProjectEntry {
+  identifier?: string;
+  title?: string;
+  path: string;
+  sort?: number;
+}
+
 const MANIFEST_CANDIDATES = [
   'manifest.yaml',
   'manifest.yml',
@@ -184,4 +191,24 @@ export function summarizeManifest(manifest: DetectedManifest | null): ManifestSu
       undefined,
     relations,
   };
+}
+
+export function listManifestProjects(manifest: DetectedManifest | null): ManifestProjectEntry[] {
+  if (!manifest) return [];
+
+  const parsedProjects = manifest.parsed.projects;
+  if (!Array.isArray(parsedProjects)) return [];
+
+  const projects: ManifestProjectEntry[] = [];
+  parsedProjects.forEach(item => {
+    if (!isRecord(item)) return;
+    if (typeof item.path !== 'string' || item.path.trim().length === 0) return;
+    projects.push({
+      identifier: typeof item.identifier === 'string' ? item.identifier : undefined,
+      title: typeof item.title === 'string' ? item.title : undefined,
+      path: item.path,
+      sort: typeof item.sort === 'number' ? item.sort : undefined,
+    });
+  });
+  return projects;
 }

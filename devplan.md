@@ -59,7 +59,7 @@ Planned near-term branches:
 4. [x] `codex/g1-macos-parity-checklist`
 5. [x] `codex/g1-import-export-parity`
 6. [x] `codex/g1-door43-catalog-discovery`
-7. [ ] `codex/g1-door43-resource-schema`
+7. [x] `codex/g1-door43-resource-schema`
 
 ### Gate 0: Stabilize Build and Runtime (In Progress)
 
@@ -100,11 +100,11 @@ Exit criteria:
 
 Door43 alignment additions (required for parity):
 
-- [ ] Resource discovery uses Catalog API (`/api/v1/catalog/search`) with `stage=prod`, plus subject/language/owner filtering.
-- [ ] Manifest processing is content-structure based (not file-extension based), supporting RC and tool-generated formats.
-- [ ] Resource dependency loading follows `dublin_core.relation`.
-- [ ] TN/TWL TSV parsing aligns with current column schemas and `rc://` linking.
-- [ ] TW article loading supports `dict/bible/{kt,names,other}` organization.
+- [x] Resource discovery uses Catalog API (`/api/v1/catalog/search`) with `stage=prod`, plus subject/language/owner filtering.
+- [x] Manifest processing is content-structure based (not file-extension based), supporting RC and tool-generated formats.
+- [x] Resource dependency loading follows `dublin_core.relation`.
+- [x] TN/TWL TSV parsing aligns with current column schemas and `rc://` linking.
+- [x] TW article loading supports `dict/bible/{kt,names,other}` organization.
 
 ### Gate 2: Security Hardening
 
@@ -172,7 +172,7 @@ Progress update:
 - `codex/g1-macos-parity-checklist` is merged to `master`.
 - `codex/g1-import-export-parity` is merged to `master`.
 - `codex/g1-door43-catalog-discovery` is merged to `master`.
-- `codex/g1-door43-resource-schema` is the active branch.
+- `codex/g1-door43-resource-schema` is merged to `master`.
 
 Door43 2026 technical note:
 

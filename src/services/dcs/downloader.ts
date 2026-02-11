@@ -2,9 +2,26 @@ import fs, { Dirent } from 'fs';
 import path from 'path';
 import yaml from 'js-yaml';
 import { getUserDataPath } from '../../utils/files';
-import { CatalogSearchParams, Door43CatalogEntry, catalogSearch } from './catalog';
-import { loadRepositoryManifest, summarizeManifest } from './manifest';
-import { DependencyGraph, buildDependencyGraph } from './resourceSchema';
+import {
+  CatalogSearchParams,
+  Door43CatalogEntry,
+  catalogSearch,
+  getRawFileText,
+  getRepositoryContents,
+} from './catalog';
+import { listManifestProjects, loadRepositoryManifest, summarizeManifest } from './manifest';
+import {
+  DependencyGraph,
+  TnTsvRow,
+  TwMarkdownArticle,
+  TwlTsvRow,
+  buildDependencyGraph,
+  parseRelationRef,
+  parseTnTsv,
+  parseTwArticleMarkdown,
+  parseTwlTsv,
+  toResourceKey,
+} from './resourceSchema';
 
 export interface CachedResource {
   id: string;
@@ -65,6 +82,37 @@ export interface CatalogResource {
 interface RepoIdentity {
   owner: string;
   repo: string;
+}
+
+export interface ParsedBookRows<T> {
+  identifier: string;
+  path: string;
+  rows: T[];
+}
+
+export interface ParsedTwArticle {
+  path: string;
+  category?: string;
+  slug?: string;
+  article: TwMarkdownArticle;
+}
+
+export interface LoadedResourceRows<T> {
+  resource: CatalogResource;
+  files: ParsedBookRows<T>[];
+}
+
+export interface LoadedTwResource {
+  resource: CatalogResource;
+  files: ParsedTwArticle[];
+}
+
+export interface LoadedSupportBundle {
+  primary: CatalogResource;
+  tn?: LoadedResourceRows<TnTsvRow> | null;
+  twl?: LoadedResourceRows<TwlTsvRow> | null;
+  tw?: LoadedTwResource | null;
+  unresolvedRelations: string[];
 }
 
 function parseOwner(manifest: ResourceManifest): string {
@@ -304,8 +352,267 @@ function buildCatalogDependencyGraph(resources: CatalogResource[]): DependencyGr
   return buildDependencyGraph(resources);
 }
 
+function sanitizeRelativePath(relPath: string): string {
+  return relPath
+    .trim()
+    .replace(/^[./]+/, '')
+    .replace(/\/+/g, '/');
+}
+
+function extensionLower(relPath: string): string {
+  return path.extname(relPath).toLowerCase();
+}
+
+function basenameLower(relPath: string): string {
+  return path.basename(relPath).toLowerCase();
+}
+
+function deriveProjectId(relPath: string, fallback: string): string {
+  const base = path.basename(relPath).replace(/\.[^.]+$/, '');
+  const candidate = base.replace(/^(tn|twl)_/i, '').trim();
+  return candidate.length > 0 ? candidate.toLowerCase() : fallback;
+}
+
+function toCatalogKey(resource: CatalogResource): string | null {
+  return toResourceKey({
+    id: resource.id,
+    language: resource.language,
+    relation: resource.relation,
+  });
+}
+
+function findRelatedResources(
+  resource: CatalogResource,
+  resources: CatalogResource[]
+): {
+  resolved: CatalogResource[];
+  unresolved: string[];
+} {
+  const byKey = new Map<string, CatalogResource>();
+  resources.forEach(item => {
+    const key = toCatalogKey(item);
+    if (key) {
+      byKey.set(key, item);
+    }
+  });
+
+  const resolved: CatalogResource[] = [];
+  const unresolved: string[] = [];
+  resource.relation.forEach(raw => {
+    const relation = parseRelationRef(raw);
+    if (!relation.key) {
+      unresolved.push(raw);
+      return;
+    }
+    const match = byKey.get(relation.key);
+    if (match) {
+      resolved.push(match);
+    } else {
+      unresolved.push(raw);
+    }
+  });
+
+  return {
+    resolved: Array.from(new Set(resolved)),
+    unresolved: Array.from(new Set(unresolved)),
+  };
+}
+
+async function listFilesRecursively(
+  owner: string,
+  repo: string,
+  ref: string,
+  relPath: string,
+  options: { maxDepth?: number } = {}
+): Promise<string[]> {
+  const maxDepth = options.maxDepth ?? 6;
+  if (maxDepth < 0) return [];
+
+  const cleanPath = sanitizeRelativePath(relPath);
+  const entries = await getRepositoryContents(owner, repo, {
+    ref,
+    relPath: cleanPath,
+  });
+  if (entries.length === 0) {
+    return [];
+  }
+
+  const files: string[] = [];
+  for (const entry of entries) {
+    if (entry.type === 'file') {
+      files.push(entry.path);
+      continue;
+    }
+    if (entry.type === 'dir' && maxDepth > 0) {
+      const nested = await listFilesRecursively(owner, repo, ref, entry.path, {
+        maxDepth: maxDepth - 1,
+      });
+      files.push(...nested);
+    }
+  }
+
+  return files;
+}
+
+async function loadParsedTnResource(
+  resource: CatalogResource
+): Promise<LoadedResourceRows<TnTsvRow>> {
+  const ref = resource.ref || 'master';
+  const manifest = await loadRepositoryManifest(resource.owner, resource.repo, { ref });
+  const projectEntries = listManifestProjects(manifest);
+  const explicitTsv = projectEntries
+    .map(item => ({
+      identifier: item.identifier || deriveProjectId(item.path, 'unknown'),
+      path: sanitizeRelativePath(item.path),
+    }))
+    .filter(item => extensionLower(item.path) === '.tsv');
+
+  const candidateFiles: { identifier: string; path: string }[] = [];
+  const prioritized = explicitTsv.filter(item => basenameLower(item.path).startsWith('tn_'));
+  (prioritized.length > 0 ? prioritized : explicitTsv).forEach(item => {
+    candidateFiles.push(item);
+  });
+
+  const parsedFiles: ParsedBookRows<TnTsvRow>[] = [];
+  for (const item of candidateFiles) {
+    const text = await getRawFileText(resource.owner, resource.repo, item.path, { ref });
+    if (!text) continue;
+    parsedFiles.push({
+      identifier: item.identifier,
+      path: item.path,
+      rows: parseTnTsv(text),
+    });
+  }
+
+  return {
+    resource,
+    files: parsedFiles,
+  };
+}
+
+async function loadParsedTwlResource(
+  resource: CatalogResource
+): Promise<LoadedResourceRows<TwlTsvRow>> {
+  const ref = resource.ref || 'master';
+  const manifest = await loadRepositoryManifest(resource.owner, resource.repo, { ref });
+  const projectEntries = listManifestProjects(manifest);
+  const explicitTsv = projectEntries
+    .map(item => ({
+      identifier: item.identifier || deriveProjectId(item.path, 'unknown'),
+      path: sanitizeRelativePath(item.path),
+    }))
+    .filter(item => extensionLower(item.path) === '.tsv');
+
+  const candidateFiles: { identifier: string; path: string }[] = [];
+  const prioritized = explicitTsv.filter(item => basenameLower(item.path).startsWith('twl_'));
+  (prioritized.length > 0 ? prioritized : explicitTsv).forEach(item => {
+    candidateFiles.push(item);
+  });
+
+  const parsedFiles: ParsedBookRows<TwlTsvRow>[] = [];
+  for (const item of candidateFiles) {
+    const text = await getRawFileText(resource.owner, resource.repo, item.path, { ref });
+    if (!text) continue;
+    parsedFiles.push({
+      identifier: item.identifier,
+      path: item.path,
+      rows: parseTwlTsv(text),
+    });
+  }
+
+  return {
+    resource,
+    files: parsedFiles,
+  };
+}
+
+async function loadParsedTwResource(resource: CatalogResource): Promise<LoadedTwResource> {
+  const ref = resource.ref || 'master';
+  const manifest = await loadRepositoryManifest(resource.owner, resource.repo, { ref });
+  const projectEntries = listManifestProjects(manifest);
+  const projectRoots = projectEntries.map(item => sanitizeRelativePath(item.path)).filter(Boolean);
+
+  const roots = projectRoots.length > 0 ? projectRoots : ['bible'];
+  const candidateFiles = new Set<string>();
+
+  for (const root of roots) {
+    if (extensionLower(root) === '.md') {
+      candidateFiles.add(root);
+      continue;
+    }
+    const files = await listFilesRecursively(resource.owner, resource.repo, ref, root, {
+      maxDepth: 8,
+    });
+    files
+      .filter(filePath => extensionLower(filePath) === '.md')
+      .forEach(filePath => candidateFiles.add(filePath));
+  }
+
+  const parsedFiles: ParsedTwArticle[] = [];
+  for (const filePath of Array.from(candidateFiles).sort()) {
+    const normalized = sanitizeRelativePath(filePath);
+    const text = await getRawFileText(resource.owner, resource.repo, normalized, { ref });
+    if (!text) continue;
+
+    const match = normalized.match(/(?:^|\/)bible\/([^/]+)\/([^/]+)\.md$/i);
+    parsedFiles.push({
+      path: normalized,
+      category: match?.[1]?.toLowerCase(),
+      slug: match?.[2]?.toLowerCase(),
+      article: parseTwArticleMarkdown(text),
+    });
+  }
+
+  return {
+    resource,
+    files: parsedFiles,
+  };
+}
+
+async function loadSupportBundle(
+  primary: CatalogResource,
+  resources: CatalogResource[]
+): Promise<LoadedSupportBundle> {
+  const related = findRelatedResources(primary, resources);
+
+  const pickBySuffix = (suffix: string): CatalogResource | null => {
+    const needle = `_${suffix}`;
+    for (const resource of related.resolved) {
+      const id = resource.id.toLowerCase();
+      const repo = resource.repo.toLowerCase();
+      if (id === suffix || id.endsWith(needle) || repo === suffix || repo.endsWith(needle)) {
+        return resource;
+      }
+    }
+    return null;
+  };
+
+  const tnResource = pickBySuffix('tn');
+  const twlResource = pickBySuffix('twl');
+  const twResource = pickBySuffix('tw');
+
+  const [tn, twl, tw] = await Promise.all([
+    tnResource ? loadParsedTnResource(tnResource) : Promise.resolve(null),
+    twlResource ? loadParsedTwlResource(twlResource) : Promise.resolve(null),
+    twResource ? loadParsedTwResource(twResource) : Promise.resolve(null),
+  ]);
+
+  return {
+    primary,
+    tn,
+    twl,
+    tw,
+    unresolvedRelations: related.unresolved,
+  };
+}
+
 export const resourceDownloader = {
   listCached,
   listCatalogResources,
   buildCatalogDependencyGraph,
+  findRelatedResources,
+  loadParsedTnResource,
+  loadParsedTwlResource,
+  loadParsedTwResource,
+  loadSupportBundle,
 };

@@ -24,10 +24,10 @@
         ]
     },
     "dependencies": {
-        "@mui/material": "^5.15.20",
-        "@mui/icons-material": "^5.15.20",
         "@emotion/react": "^11.13.0",
         "@emotion/styled": "^11.13.0",
+        "@mui/icons-material": "^5.15.20",
+        "@mui/material": "^5.15.20",
         "adm-zip": "0.4.7",
         "archiver": "0.21.0",
         "async": "1.4.2",
@@ -69,14 +69,15 @@
         "usfm-js": "^2.0.1"
     },
     "devDependencies": {
-        "ajv": "^8.17.1",
         "@babel/cli": "^7.6.2",
         "@babel/preset-env": "^7.6.0",
         "@babel/preset-react": "^7.0.0",
+        "@babel/preset-typescript": "^7.28.5",
         "@types/react": "^18.3.3",
         "@types/react-dom": "^18.3.0",
         "@typescript-eslint/eslint-plugin": "^5.62.0",
         "@typescript-eslint/parser": "^5.62.0",
+        "ajv": "^8.17.1",
         "babel-loader": "^9.0.0",
         "bower": "^1.8.8",
         "check-for-leaks": "^1.2.0",
