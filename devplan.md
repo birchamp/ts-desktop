@@ -1,6 +1,6 @@
 # translationStudio Desktop Modernization Plan
 
-Last updated: 2026-02-11
+Last updated: 2026-02-11 (post Gate 1 checklist execution)
 
 ## Objective
 
@@ -23,6 +23,7 @@ Open risks still present:
 - Lint debt is reduced to warnings, but a warning budget policy is not yet defined.
 - Security posture is intentionally permissive (`nodeIntegration: true`, `contextIsolation: false`) while migration continues.
 - Feature parity is not yet proven with executed workflow results (checklist exists, but entries are still `NOT RUN`).
+- Gate 1 checklist execution identified multiple P0/P1 blockers; Gate 1 remains `NOT READY`.
 - Dependency risk remains high (legacy packages and known audit findings).
 - Translation workflow parity is incomplete (no verse-level navigation/editor persistence parity yet).
 - Cached-resource support-resource preloading parity (TN/TWL/TW) is not complete.
@@ -107,7 +108,7 @@ Scope:
 Exit criteria:
 
 - [x] Parity checklist exists and is versioned in repo.
-- [ ] Each macOS workflow marked Pass/Fail with notes.
+- [x] Each macOS workflow marked Pass/Fail/Blocked with notes.
 - [ ] No P0/P1 functional regressions against legacy behavior.
 
 Door43 alignment additions (required for parity):
@@ -189,6 +190,7 @@ Progress update:
 - `codex/g1-door43-catalog-discovery` is merged to `master`.
 - `codex/g1-door43-resource-schema` is merged to `master`.
 - Project context persistence and translate preload wiring are merged to `master`.
+- macOS Gate 1 checklist execution run is recorded in `docs/macos-parity-checklist.md` (current result: `NOT READY`).
 
 Door43 2026 technical note:
 
