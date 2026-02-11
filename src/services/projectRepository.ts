@@ -24,6 +24,44 @@ export interface ProjectAssetRecord {
   updatedAt: number;
 }
 
+export interface ProjectBookContext {
+  id: string;
+  name: string;
+  testament: 'OT' | 'NT';
+}
+
+export interface ProjectResourceContext {
+  source: 'cached' | 'catalog' | 'none';
+  id: string;
+  name: string;
+  owner?: string;
+  version?: string;
+  language?: string;
+  repo?: string;
+  ref?: string;
+  containerPath?: string;
+}
+
+export interface ProjectSupportSummary {
+  tnRows: number;
+  twlRows: number;
+  twArticles: number;
+  unresolved: number;
+}
+
+export interface ProjectContextData {
+  formatVersion: string;
+  book: ProjectBookContext;
+  resource?: ProjectResourceContext | null;
+  supportSummary?: ProjectSupportSummary | null;
+}
+
+export interface ProjectContextRecord {
+  projectId: string;
+  context: ProjectContextData;
+  updatedAt: number;
+}
+
 export interface ProjectCreateInput {
   id?: string;
   name: string;
@@ -32,6 +70,7 @@ export interface ProjectCreateInput {
   progress?: number;
   lastModified?: number;
   lastOpened?: number;
+  context?: ProjectContextData | null;
 }
 
 const DB_PATH = 'library/index.sqlite';
@@ -69,6 +108,19 @@ function normalizeParams(params: SqlParams | undefined): SqlParams | undefined {
   return Object.fromEntries(entries);
 }
 
+function parseProjectContext(contextJson: string): ProjectContextData | null {
+  try {
+    const parsed = JSON.parse(contextJson);
+    if (!parsed || typeof parsed !== 'object') return null;
+    const context = parsed as ProjectContextData;
+    if (!context.book || typeof context.book !== 'object') return null;
+    if (!context.formatVersion || typeof context.formatVersion !== 'string') return null;
+    return context;
+  } catch {
+    return null;
+  }
+}
+
 export class ProjectRepository {
   async createProject(
     input: ProjectCreateInput,
@@ -93,6 +145,13 @@ export class ProjectRepository {
               `INSERT OR REPLACE INTO app_recent_projects (id, name, language, lastOpened)
              VALUES (?, ?, ?, ?)`,
               normalizeParams([id, input.name, input.language, lastOpened])
+            );
+          }
+          if (input.context) {
+            tx.run(
+              `INSERT OR REPLACE INTO app_project_context (projectId, contextJson, updatedAt)
+             VALUES (?, ?, ?)`,
+              normalizeParams([id, JSON.stringify(input.context), lastModified])
             );
           }
         });
@@ -153,6 +212,7 @@ export class ProjectRepository {
           tx.run(`DELETE FROM app_projects WHERE id = ?`, [id]);
           tx.run(`DELETE FROM app_recent_projects WHERE id = ?`, [id]);
           tx.run(`DELETE FROM app_project_assets WHERE projectId = ?`, [id]);
+          tx.run(`DELETE FROM app_project_context WHERE projectId = ?`, [id]);
         });
       },
       { save: true }
@@ -253,6 +313,46 @@ export class ProjectRepository {
         [projectId]
       )
     );
+  }
+
+  async upsertProjectContext(
+    projectId: string,
+    context: ProjectContextData,
+    updatedAt = Date.now()
+  ): Promise<ProjectContextRecord> {
+    await withDatabase(
+      db => {
+        db.transaction(tx => {
+          tx.run(
+            `INSERT OR REPLACE INTO app_project_context (projectId, contextJson, updatedAt)
+           VALUES (?, ?, ?)`,
+            normalizeParams([projectId, JSON.stringify(context), updatedAt])
+          );
+        });
+      },
+      { save: true }
+    );
+
+    return { projectId, context, updatedAt };
+  }
+
+  async getProjectContext(projectId: string): Promise<ProjectContextRecord | null> {
+    return withDatabase(db => {
+      const row = db.get<{ projectId: string; contextJson: string; updatedAt: number }>(
+        `SELECT projectId, contextJson, updatedAt
+         FROM app_project_context
+         WHERE projectId = ?`,
+        [projectId]
+      );
+      if (!row) return null;
+      const context = parseProjectContext(row.contextJson);
+      if (!context) return null;
+      return {
+        projectId: row.projectId,
+        context,
+        updatedAt: row.updatedAt,
+      };
+    });
   }
 }
 

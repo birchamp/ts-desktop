@@ -90,9 +90,18 @@ const HomeScreen: React.FC = () => {
     await refresh();
   };
 
-  const handleOpenProject = (projectId: string) => {
-    // TODO: Open project in translation screen
-    navigate('/translate');
+  const handleOpenProject = async (projectId: string) => {
+    const project = await projectRepository.getProjectById(projectId);
+    if (project) {
+      await projectRepository.recordRecent({
+        id: project.id,
+        name: project.name,
+        language: project.language,
+        lastOpened: Date.now(),
+      });
+      await refresh();
+    }
+    navigate(`/translate?projectId=${encodeURIComponent(projectId)}`);
   };
 
   return (
@@ -168,13 +177,13 @@ const HomeScreen: React.FC = () => {
             <Card>
               <List dense>
                 {recents.map(r => (
-                  <ListItem key={r.id} divider button onClick={() => handleOpenProject(r.id)}>
+                  <ListItem key={r.id} divider button onClick={() => void handleOpenProject(r.id)}>
                     <ListItemText
                       primary={r.name}
                       secondary={`${r.language} • ${new Date(r.lastOpened).toLocaleString()}`}
                     />
                     <ListItemSecondaryAction>
-                      <IconButton edge='end' onClick={() => handleOpenProject(r.id)}>
+                      <IconButton edge='end' onClick={() => void handleOpenProject(r.id)}>
                         <PlayArrow />
                       </IconButton>
                     </ListItemSecondaryAction>
@@ -217,7 +226,7 @@ const HomeScreen: React.FC = () => {
                     <ListItemSecondaryAction>
                       <IconButton
                         edge='end'
-                        onClick={() => handleOpenProject(project.id)}
+                        onClick={() => void handleOpenProject(project.id)}
                         style={{ marginRight: 8 }}
                       >
                         <PlayArrow />

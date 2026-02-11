@@ -45,6 +45,17 @@ const MIGRATIONS: Migration[] = [
       );`);
     },
   },
+  {
+    version: 3,
+    name: 'create-project-context-table',
+    up: db => {
+      db.exec(`CREATE TABLE IF NOT EXISTS app_project_context (
+        projectId TEXT PRIMARY KEY,
+        contextJson TEXT NOT NULL,
+        updatedAt INTEGER NOT NULL
+      );`);
+    },
+  },
 ];
 
 function getCurrentVersion(db: DatabaseHandle): number {

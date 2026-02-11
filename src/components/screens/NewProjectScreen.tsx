@@ -31,7 +31,7 @@ import { SelectChangeEvent } from '@mui/material/Select';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../contexts/AppContext';
-import { projectRepository } from '../../services/projectRepository';
+import { projectRepository, type ProjectContextData } from '../../services/projectRepository';
 import { resourceDownloader } from '../../services/dcs/downloader';
 import type {
   CachedResource,
@@ -332,6 +332,41 @@ const NewProjectScreen: React.FC = () => {
   const handleCreateProject = async () => {
     if (!projectName.trim() || !selectedBook) return;
 
+    const projectContext: ProjectContextData = {
+      formatVersion: 'dcs',
+      book: {
+        id: selectedBook.id,
+        name: selectedBook.name,
+        testament: selectedBook.testament,
+      },
+      resource: selectedResource
+        ? {
+            source: selectedResource.source,
+            id: selectedResource.id,
+            name: selectedResource.name,
+            owner: selectedResource.owner,
+            version: selectedResource.version,
+            language: selectedResource.language,
+            ...(selectedResource.catalog
+              ? {
+                  repo: selectedResource.catalog.repo,
+                  ref: selectedResource.catalog.ref,
+                }
+              : {}),
+            ...(selectedResource.cached
+              ? {
+                  containerPath: selectedResource.cached.containerPath,
+                }
+              : {}),
+          }
+        : {
+            source: 'none',
+            id: 'none',
+            name: 'Demo mode',
+          },
+      supportSummary: supportSummary ? { ...supportSummary } : null,
+    };
+
     const newProject = {
       id: Date.now().toString(),
       name: projectName,
@@ -355,6 +390,7 @@ const NewProjectScreen: React.FC = () => {
           language: newProject.language,
           progress: newProject.progress,
           lastModified: newProject.lastModified,
+          context: projectContext,
         },
         { recordRecent: true }
       );
@@ -362,7 +398,7 @@ const NewProjectScreen: React.FC = () => {
       console.error('Failed to save project:', e);
     }
 
-    navigate('/translate');
+    navigate(`/translate?projectId=${encodeURIComponent(newProject.id)}`);
   };
 
   const canProceed = () => {
