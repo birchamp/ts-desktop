@@ -8,7 +8,18 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            smoke_command: xvfb-run -a npm run smoke:startup
+          - os: macos-latest
+            smoke_command: npm run smoke:startup
+          - os: windows-latest
+            smoke_command: npm run smoke:startup
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,6 +42,9 @@ jobs:
       - name: Build (dev)
         run: npm run build:dev
 
+      - name: Startup smoke
+        run: ${{ matrix.smoke_command }}
+
       - name: Dependency audit (high+)
         run: npm audit --omit=dev --audit-level=high
         continue-on-error: true
@@ -38,5 +52,5 @@ jobs:
       - name: Archive build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dist
+          name: dist-${{ matrix.os }}
           path: dist

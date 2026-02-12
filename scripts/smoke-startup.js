@@ -7,16 +7,11 @@ function getTimeoutMs() {
   return 20000;
 }
 
-if (process.platform !== 'darwin') {
-  console.log('Smoke test skipped: this script currently targets macOS startup validation.');
-  process.exit(0);
-}
-
 const timeoutMs = getTimeoutMs();
 const env = { ...process.env };
 delete env.ELECTRON_RUN_AS_NODE;
 
-console.log(`Smoke test: launching app for ${timeoutMs}ms...`);
+console.log(`Smoke test (${process.platform}): launching app for ${timeoutMs}ms...`);
 
 const child = spawn(process.execPath, ['scripts/run-electron.js', '.', '-remote-debugging-port=9222'], {
   cwd: process.cwd(),

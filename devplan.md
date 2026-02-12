@@ -1,6 +1,6 @@
 # translationStudio Desktop Modernization Plan
 
-Last updated: 2026-02-12 (Gate 2 hardening implementation complete on branch; pending merge)
+Last updated: 2026-02-12 (Gate 2 merged; Gate 3 cross-platform validation branch started)
 
 ## Objective
 
@@ -43,22 +43,11 @@ Open risks still present:
 - macOS parity evidence is now green, but Windows/Linux parity evidence is not yet established.
 - Dependency risk remains high (legacy packages and known audit findings).
 
-Current branch implementation status (`codex/g2-typed-ipc-guardrails`):
+Current branch implementation status (`codex/g3-ci-matrix-smoke`):
 
-- Removed renderer `window.require` fallback path from typed IPC helper (`src/utils/ipc.ts`) and window control helpers (`src/utils/files.ts`).
-- Added typed dialog helper utilities (`src/utils/dialog.ts`) and rewired Home/Import/Export flows to consume them.
-- Added `guard:renderer-node` command (`scripts/check-renderer-node-builtins.js`) and wired it into `gate:check`.
-- Removed remaining renderer Node-builtin imports from `src/services/dcs/downloader.ts` and `src/utils/import/usfm.ts`.
-- Added typed IPC-backed absolute directory listing (`fs:listAbsoluteEntries`) and refactored local resource parsing to consume IPC/file helpers only.
-- Enabled secure BrowserWindow defaults for main and academy windows in `main.js`:
-  - `nodeIntegration: false`
-  - `contextIsolation: true`
-  - `sandbox: true`
-- Removed preload `require` bridge exposure and retained typed `electronAPI` surface only.
-- Validation results on branch:
-  - `npm run gate:check` passes
-  - `npm run gate:macos` passes (requires GUI-capable run)
-  - `npm run test:ui:macos` passes
+- CI workflow is being expanded to an OS matrix (`ubuntu-latest`, `macos-latest`, `windows-latest`).
+- Startup smoke script is being generalized for cross-platform CI execution.
+- Cross-platform checklist scaffold added in `docs/cross-platform-parity-checklist.md` for Windows/Linux status tracking.
 
 ## Execution Strategy (Optimal Order)
 
@@ -112,6 +101,8 @@ Planned next branches:
    Scope: strengthen Gate 1 evidence with targeted automation and reduce manual-only verification surface.
 6. [x] `codex/g2-typed-ipc-guardrails`
    Scope: begin Gate 2 by removing renderer-side direct Electron access patterns and adding migration guardrails.
+7. [ ] `codex/g3-ci-matrix-smoke`
+   Scope: establish cross-platform CI matrix and startup smoke coverage for Gate 3.
 
 ### Gate 0: Stabilize Build and Runtime (Complete)
 
@@ -214,9 +205,9 @@ Exit criteria:
 
 ## Immediate Next Work (Recommended)
 
-1. Merge `codex/g2-typed-ipc-guardrails` into `master`.
-2. Open Gate 3 branch for cross-platform CI matrix expansion and smoke coverage.
-3. Add Windows/Linux parity checklist execution lanes.
+1. Complete and merge `codex/g3-ci-matrix-smoke`.
+2. Run the full CI matrix and collect first Windows/Linux results in `docs/cross-platform-parity-checklist.md`.
+3. Expand from startup smoke to targeted workflow smoke on Windows/Linux (open/import/export/review lanes).
 
 Progress update:
 
@@ -234,7 +225,8 @@ Progress update:
 - `codex/g1-macos-parity-rerun` is merged to `master`.
 - `codex/g1-review-workflow-parity` is merged to `master`.
 - `codex/g1-playwright-clickthrough-validation` is merged to `master`.
-- `codex/g2-typed-ipc-guardrails` implementation is complete and pending merge.
+- `codex/g2-typed-ipc-guardrails` is merged to `master`.
+- `codex/g3-ci-matrix-smoke` is in progress.
 - macOS Gate 1 checklist execution run is recorded in `docs/macos-parity-checklist.md` (current result: `READY`).
 
 Door43 2026 technical note:
