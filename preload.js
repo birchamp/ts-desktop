@@ -5,50 +5,6 @@ const canUseContextBridge = Boolean(
   typeof contextBridge.exposeInMainWorld === 'function'
 );
 
-// Resolve Node builtins lazily for legacy consumers. This block can be removed
-// once the renderer is fully migrated away from CommonJS access.
-const nativeRequire = typeof require === 'function' ? require : null;
-const builtinSpecifiers = {
-  fs: ['node:fs', 'fs'],
-  path: ['node:path', 'path'],
-  crypto: ['node:crypto', 'crypto'],
-  electron: ['electron'],
-};
-
-const passthroughSpecifiers = new Set(['react', 'react-dom']);
-
-const moduleCache = {};
-function loadBuiltin(name) {
-  if (!nativeRequire) {
-    throw new Error('Native require is not available in preload context');
-  }
-
-  if (moduleCache[name]) {
-    return moduleCache[name];
-  }
-  const specifiers = builtinSpecifiers[name] || [];
-  for (const spec of specifiers) {
-    try {
-      moduleCache[name] = nativeRequire(spec);
-      return moduleCache[name];
-    } catch (_) {}
-  }
-  throw new Error(`Module "${name}" has not been exposed to the renderer`);
-}
-
-function bridgeRequire(moduleName) {
-  if (moduleName in builtinSpecifiers) {
-    return loadBuiltin(moduleName);
-  }
-  if (passthroughSpecifiers.has(moduleName)) {
-    if (!nativeRequire) {
-      throw new Error('Native require is not available in preload context');
-    }
-    return nativeRequire(moduleName);
-  }
-  throw new Error(`Module "${moduleName}" has not been exposed to the renderer`);
-}
-
 function exposeInRenderer(name, value) {
   if (canUseContextBridge) {
     contextBridge.exposeInMainWorld(name, value);
@@ -56,8 +12,6 @@ function exposeInRenderer(name, value) {
   }
   globalThis[name] = value;
 }
-
-exposeInRenderer('require', bridgeRequire);
 
 function toUint8Array(value) {
   if (!value) return null;
@@ -125,16 +79,11 @@ const electronAPI = {
       const result = await ipcRenderer.invoke('fs:readFile', relPath);
       return toUint8Array(result);
     },
-    writeFile: (relPath, data) => {
-      const payload = data instanceof Uint8Array ? Buffer.from(data) : data;
-      return ipcRenderer.invoke('fs:writeFile', { relPath, data: payload });
-    },
+    writeFile: (relPath, data) => ipcRenderer.invoke('fs:writeFile', { relPath, data }),
     readAbsoluteText: (absPath) => ipcRenderer.invoke('fs:readAbsoluteText', absPath),
+    listAbsoluteEntries: (absPath) => ipcRenderer.invoke('fs:listAbsoluteEntries', absPath),
     copyAbsoluteToUserData: (relPath, absPath) => ipcRenderer.invoke('fs:copyAbsoluteToUserData', { relPath, absPath }),
-    writeAbsoluteFile: (absPath, data) => {
-      const payload = data instanceof Uint8Array ? Buffer.from(data) : data;
-      return ipcRenderer.invoke('fs:writeAbsoluteFile', { absPath, data: payload });
-    },
+    writeAbsoluteFile: (absPath, data) => ipcRenderer.invoke('fs:writeAbsoluteFile', { absPath, data }),
   },
   app: {
     getUserDataPath: () => ipcRenderer.invoke('app:getUserDataPath'),

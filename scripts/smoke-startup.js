@@ -1,15 +1,6 @@
 #!/usr/bin/env node
 const { spawn } = require('child_process');
 
-function resolveElectron() {
-  try {
-    return require('electron');
-  } catch (error) {
-    console.error('Smoke test failed: Electron is not installed. Run `npm install` first.');
-    process.exit(1);
-  }
-}
-
 function getTimeoutMs() {
   const parsed = Number(process.env.TS_SMOKE_TIMEOUT_MS || '20000');
   if (Number.isFinite(parsed) && parsed >= 5000) return parsed;
@@ -22,13 +13,12 @@ if (process.platform !== 'darwin') {
 }
 
 const timeoutMs = getTimeoutMs();
-const electronBin = resolveElectron();
 const env = { ...process.env };
 delete env.ELECTRON_RUN_AS_NODE;
 
 console.log(`Smoke test: launching app for ${timeoutMs}ms...`);
 
-const child = spawn(electronBin, ['.'], {
+const child = spawn(process.execPath, ['scripts/run-electron.js', '.', '-remote-debugging-port=9222'], {
   cwd: process.cwd(),
   env,
   stdio: 'inherit',

@@ -1,26 +1,26 @@
 # Electron Security Audit — February 2026
 
 ## Summary
-The renderer currently runs with `nodeIntegration: true` and `contextIsolation: false`. This setting was re-enabled temporarily to get the new React dashboard working, but it reintroduces classic Electron security risks. We audited the code paths to map out everything that still depends on direct Node primitives so that we can safely restore the default hardened configuration (`nodeIntegration: false`, `contextIsolation: true`, `sandbox: true`).
+Main and academy renderer windows now run with secure defaults: `nodeIntegration: false`, `contextIsolation: true`, and `sandbox: true`. The modern TypeScript renderer paths use typed IPC only, with Node filesystem/path work moved behind preload/main IPC channels.
 
 ## Direct Renderer Dependencies on Node
 | Area | Description | Source |
 |------|-------------|--------|
 | Webpack externals | Bundle still outputs `require("fs")`, `require("path")`, `require("crypto")` stubs because several dependencies (notably `sql.js` and legacy Polymer scripts) import Node modules. | `dist/js/bundle.js:80743-80765` |
 | Legacy JS modules | Numerous files under `src/js/**` require Node builtins (`fs`, `path`, `child_process`, etc.). Even if they are not imported yet, they will break once referenced by React unless we isolate them behind IPC. | `rg "require('fs')" src/js` |
-| Remaining TS Node imports | Modern TypeScript sources still include a small baseline of Node-builtin imports that must be migrated behind IPC before secure flags can be flipped. | `src/services/dcs/downloader.ts`, `src/utils/import/usfm.ts` |
+| Remaining legacy surface | Legacy code still exists under `src/js/**` and is the primary remaining Node-heavy area to migrate/retire before stricter bundle-level enforcement. | `src/js/**` |
 
 ## IPC Surface (Current)
 `main.js` exposes the following handlers through `ipcMain.handle`:
 - `dialog:open`, `dialog:save`
 - `app:getUserDataPath`
 - `fs:ensureDir`, `fs:readJson`, `fs:writeJson`, `fs:readFile`, `fs:writeFile`
-- `fs:readAbsoluteText`, `fs:copyAbsoluteToUserData`, `fs:writeAbsoluteFile`
+- `fs:readAbsoluteText`, `fs:listAbsoluteEntries`, `fs:copyAbsoluteToUserData`, `fs:writeAbsoluteFile`
 
 `preload.js` currently relays:
 - `electronAPI.send`, `electronAPI.invoke`, `electronAPI.on`
 - Window controls (`minimizeWindow`, `maximizeWindow`, `closeWindow`)
-- A permissive `require` shim that proxies to Node builtins (`fs`, `path`, `crypto`, `electron`) and passes through `react`/`react-dom`.
+- Typed `electronAPI` bridge only (legacy `window.require` exposure removed).
 
 ## Hardening Plan
 1. **Reduce Webpack externals**
@@ -32,15 +32,15 @@ The renderer currently runs with `nodeIntegration: true` and `contextIsolation: 
 3. **Lock Down Preload**
    - Replace the generic `require` bridge with explicit APIs (`files.read`, `files.write`, etc.).
    - Export strongly typed interfaces via `contextBridge.exposeInMainWorld` so renderer consumers can import from `@/ipc` instead of calling `window.electronAPI` manually.
-4. **Restore Secure Defaults**
-   - Once React bundle no longer references bare `require('fs')`, toggle `nodeIntegration: false`, `contextIsolation: true`, and `sandbox: true` in `main.js` / `main.ts`.
-   - Add regression test that fails if `bundle.js` contains `module.exports = require("fs")`.
+4. **Maintain Secure Defaults**
+   - Keep `nodeIntegration: false`, `contextIsolation: true`, and `sandbox: true` enabled in app windows.
+   - Keep regression checks for renderer Node builtin imports and expand toward bundle-level strictness as legacy code is removed.
 
 ## Next Actions (Phase 1 scope)
 - [x] Create typed wrapper in `src/utils/ipc.ts` that documents available IPC channels and discourages direct access to `window.electronAPI`.
 - [x] Update React code to consume typed wrappers instead of touching `window.electronAPI` directly for dialog/files/workflow actions in modern TS screens/components.
 - [x] Add a renderer guard (`npm run guard:renderer-node`) to prevent reintroduction of `window.require`, direct Electron imports, and new Node-builtin imports in TS/TSX.
-- [ ] Remove baseline Node-builtin exceptions in `src/services/dcs/downloader.ts` and `src/utils/import/usfm.ts` by moving file/path operations behind IPC.
-- [ ] Start replacing remaining legacy `src/js/**` imports with new typed services to minimize Node usage before flipping security switches.
+- [x] Remove renderer TS Node-builtin imports in `src/services/dcs/downloader.ts` and `src/utils/import/usfm.ts` by moving file/path operations behind IPC.
+- [ ] Start replacing remaining legacy `src/js/**` imports with new typed services to reduce bundle-level Node externals.
 
 Document prepared by Codex assistant on 2026-02-12.

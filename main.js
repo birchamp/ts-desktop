@@ -200,6 +200,22 @@ function initialize() {
         } catch (e) { log('fs:readAbsoluteText error', { absPath, err: e && e.message }); return null; }
     });
 
+    ipcMain.handle('fs:listAbsoluteEntries', async (event, absPath) => {
+        try {
+            const root = String(absPath || '');
+            if (!root) return [];
+            const entries = await fsp.readdir(root, { withFileTypes: true });
+            return entries.map((entry) => ({
+                name: entry.name,
+                isFile: entry.isFile(),
+                isDirectory: entry.isDirectory(),
+            }));
+        } catch (e) {
+            log('fs:listAbsoluteEntries error', { absPath, err: e && e.message });
+            return [];
+        }
+    });
+
     ipcMain.handle('fs:copyAbsoluteToUserData', async (event, payload) => {
         const { absPath, relPath } = payload || {};
         try {
@@ -438,10 +454,10 @@ function createWindow() {
         autoHideMenuBar: true,
         frame: false,
         webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: false,
+            nodeIntegration: false,
+            contextIsolation: true,
             preload: path.join(__dirname, 'preload.js'),
-            sandbox: false
+            sandbox: true
         },
         title: app.getName(),
         icon: path.join(__dirname, '/icons/icon.png')
@@ -619,10 +635,10 @@ function createAcademyWindow() {
         show: false,
         frame: false,
         webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: false,
+            nodeIntegration: false,
+            contextIsolation: true,
             preload: path.join(__dirname, 'preload.js'),
-            sandbox: false
+            sandbox: true
         }
     });
 

@@ -1,7 +1,5 @@
-import fs, { Dirent } from 'fs';
-import path from 'path';
 import yaml from 'js-yaml';
-import { getUserDataPath } from '../../utils/files';
+import { getUserDataPath, listAbsoluteEntries, readAbsoluteText } from '../../utils/files';
 import {
   CatalogSearchParams,
   Door43CatalogEntry,
@@ -151,6 +149,40 @@ export interface LoadedCachedSourceText {
   text: string;
 }
 
+function normalizePath(value: string): string {
+  return value.replace(/\\/g, '/');
+}
+
+function trimTrailingSlashes(value: string): string {
+  return value.replace(/[\\/]+$/, '');
+}
+
+function trimLeadingSlashes(value: string): string {
+  return value.replace(/^[\\/]+/, '');
+}
+
+function joinPath(basePath: string, relPath: string): string {
+  if (!relPath) return trimTrailingSlashes(basePath);
+  const root = trimTrailingSlashes(basePath);
+  const leaf = trimLeadingSlashes(relPath);
+  if (!root) return leaf;
+  if (!leaf) return root;
+  return `${root}/${leaf}`;
+}
+
+function basename(relPath: string): string {
+  const normalized = normalizePath(relPath);
+  const parts = normalized.split('/');
+  return parts[parts.length - 1] || '';
+}
+
+function extname(relPath: string): string {
+  const base = basename(relPath);
+  const idx = base.lastIndexOf('.');
+  if (idx <= 0) return '';
+  return base.slice(idx);
+}
+
 function parseOwner(manifest: ResourceManifest): string {
   const creator = manifest.dublin_core?.creator;
   if (Array.isArray(creator)) {
@@ -191,7 +223,8 @@ function parseRelations(manifest: ResourceManifest): string[] {
 
 async function readJsonManifest(manifestPath: string): Promise<ResourceManifest | null> {
   try {
-    const raw = await fs.promises.readFile(manifestPath, 'utf8');
+    const raw = await readAbsoluteText(manifestPath);
+    if (!raw) return null;
     return JSON.parse(raw) as ResourceManifest;
   } catch {
     return null;
@@ -200,7 +233,8 @@ async function readJsonManifest(manifestPath: string): Promise<ResourceManifest 
 
 async function readYamlManifest(manifestPath: string): Promise<ResourceManifest | null> {
   try {
-    const raw = await fs.promises.readFile(manifestPath, 'utf8');
+    const raw = await readAbsoluteText(manifestPath);
+    if (!raw) return null;
     const parsed = yaml.load(raw) as unknown;
     if (typeof parsed === 'object' && parsed !== null) {
       return parsed as ResourceManifest;
@@ -212,9 +246,9 @@ async function readYamlManifest(manifestPath: string): Promise<ResourceManifest 
 }
 
 async function readManifest(containerPath: string): Promise<ResourceManifest | null> {
-  const packageJsonPath = path.join(containerPath, 'package.json');
-  const manifestYamlPath = path.join(containerPath, 'manifest.yaml');
-  const manifestYmlPath = path.join(containerPath, 'manifest.yml');
+  const packageJsonPath = joinPath(containerPath, 'package.json');
+  const manifestYamlPath = joinPath(containerPath, 'manifest.yaml');
+  const manifestYmlPath = joinPath(containerPath, 'manifest.yml');
 
   return (
     (await readJsonManifest(packageJsonPath)) ||
@@ -280,19 +314,15 @@ async function listCached(): Promise<CachedResource[]> {
     return [];
   }
 
-  const resourcesRoot = path.join(userDataPath, 'library', 'resource_containers');
-  let entries: Dirent[];
-  try {
-    entries = await fs.promises.readdir(resourcesRoot, { withFileTypes: true });
-  } catch {
-    return [];
-  }
+  const resourcesRoot = joinPath(userDataPath, 'library/resource_containers');
+  const entries = await listAbsoluteEntries(resourcesRoot);
+  if (entries.length === 0) return [];
 
   const resources = await Promise.all(
     entries
-      .filter(entry => entry.isDirectory())
+      .filter(entry => entry.isDirectory)
       .map(async entry => {
-        const containerPath = path.join(resourcesRoot, entry.name);
+        const containerPath = joinPath(resourcesRoot, entry.name);
         const manifest = await readManifest(containerPath);
 
         if (!manifest) {
@@ -397,15 +427,15 @@ function sanitizeRelativePath(relPath: string): string {
 }
 
 function extensionLower(relPath: string): string {
-  return path.extname(relPath).toLowerCase();
+  return extname(relPath).toLowerCase();
 }
 
 function basenameLower(relPath: string): string {
-  return path.basename(relPath).toLowerCase();
+  return basename(relPath).toLowerCase();
 }
 
 function deriveProjectId(relPath: string, fallback: string): string {
-  const base = path.basename(relPath).replace(/\.[^.]+$/, '');
+  const base = basename(relPath).replace(/\.[^.]+$/, '');
   const candidate = base.replace(/^(tn|twl)_/i, '').trim();
   return candidate.length > 0 ? candidate.toLowerCase() : fallback;
 }
@@ -439,7 +469,7 @@ function pickCandidatePath(
       if (matchesBookIdentifier(explicitId, normalizedBookId)) {
         return { bookId: normalizedBookId, path: pathItem };
       }
-      if (matchesBookIdentifier(path.basename(pathItem), normalizedBookId)) {
+      if (matchesBookIdentifier(basename(pathItem), normalizedBookId)) {
         return { bookId: normalizedBookId, path: pathItem };
       }
     }
@@ -586,23 +616,18 @@ async function listLocalFilesRecursively(
   if (maxDepth < 0) return [];
 
   const cleanPath = sanitizeRelativePath(relPath);
-  const root = cleanPath ? path.join(containerPath, cleanPath) : containerPath;
-  let entries: Dirent[];
-  try {
-    entries = await fs.promises.readdir(root, { withFileTypes: true });
-  } catch {
-    return [];
-  }
+  const root = cleanPath ? joinPath(containerPath, cleanPath) : containerPath;
+  const entries = await listAbsoluteEntries(root);
+  if (entries.length === 0) return [];
 
   const files: string[] = [];
   for (const entry of entries) {
-    const absPath = path.join(root, entry.name);
-    const itemRelPath = sanitizeRelativePath(path.relative(containerPath, absPath));
-    if (entry.isFile()) {
+    const itemRelPath = sanitizeRelativePath(cleanPath ? `${cleanPath}/${entry.name}` : entry.name);
+    if (entry.isFile) {
       files.push(itemRelPath);
       continue;
     }
-    if (entry.isDirectory() && maxDepth > 0) {
+    if (entry.isDirectory && maxDepth > 0) {
       const nested = await listLocalFilesRecursively(containerPath, itemRelPath, {
         maxDepth: maxDepth - 1,
       });
@@ -797,17 +822,14 @@ async function loadParsedCachedTnResource(
 
   const parsedFiles: ParsedBookRows<TnTsvRow>[] = [];
   for (const item of candidateFiles) {
-    try {
-      const absPath = path.join(resource.containerPath, item.path);
-      const text = await fs.promises.readFile(absPath, 'utf8');
-      parsedFiles.push({
-        identifier: item.identifier,
-        path: item.path,
-        rows: parseTnTsv(text),
-      });
-    } catch {
-      // Ignore unreadable files and continue loading the rest.
-    }
+    const absPath = joinPath(resource.containerPath, item.path);
+    const text = await readAbsoluteText(absPath);
+    if (!text) continue;
+    parsedFiles.push({
+      identifier: item.identifier,
+      path: item.path,
+      rows: parseTnTsv(text),
+    });
   }
 
   return {
@@ -848,17 +870,14 @@ async function loadParsedCachedTwlResource(
 
   const parsedFiles: ParsedBookRows<TwlTsvRow>[] = [];
   for (const item of candidateFiles) {
-    try {
-      const absPath = path.join(resource.containerPath, item.path);
-      const text = await fs.promises.readFile(absPath, 'utf8');
-      parsedFiles.push({
-        identifier: item.identifier,
-        path: item.path,
-        rows: parseTwlTsv(text),
-      });
-    } catch {
-      // Ignore unreadable files and continue loading the rest.
-    }
+    const absPath = joinPath(resource.containerPath, item.path);
+    const text = await readAbsoluteText(absPath);
+    if (!text) continue;
+    parsedFiles.push({
+      identifier: item.identifier,
+      path: item.path,
+      rows: parseTwlTsv(text),
+    });
   }
 
   return {
@@ -893,19 +912,16 @@ async function loadParsedCachedTwResource(
   const parsedFiles: ParsedTwArticle[] = [];
   for (const filePath of Array.from(candidateFiles).sort()) {
     const normalized = sanitizeRelativePath(filePath);
-    try {
-      const absPath = path.join(resource.containerPath, normalized);
-      const text = await fs.promises.readFile(absPath, 'utf8');
-      const match = normalized.match(/(?:^|\/)bible\/([^/]+)\/([^/]+)\.md$/i);
-      parsedFiles.push({
-        path: normalized,
-        category: match?.[1]?.toLowerCase(),
-        slug: match?.[2]?.toLowerCase(),
-        article: parseTwArticleMarkdown(text),
-      });
-    } catch {
-      // Ignore unreadable files and continue loading the rest.
-    }
+    const absPath = joinPath(resource.containerPath, normalized);
+    const text = await readAbsoluteText(absPath);
+    if (!text) continue;
+    const match = normalized.match(/(?:^|\/)bible\/([^/]+)\/([^/]+)\.md$/i);
+    parsedFiles.push({
+      path: normalized,
+      category: match?.[1]?.toLowerCase(),
+      slug: match?.[2]?.toLowerCase(),
+      article: parseTwArticleMarkdown(text),
+    });
   }
 
   return {
@@ -1033,33 +1049,25 @@ async function loadCachedSourceText(
 
   let candidate = pickCandidatePath(explicitPaths, explicitPathIds, bookId);
   if (!candidate) {
-    const discoveredFiles: string[] = [];
-    const walk = async (rootPath: string, depth: number): Promise<void> => {
-      if (depth > 8) return;
-      const entries = await fs.promises.readdir(rootPath, { withFileTypes: true });
-      for (const entry of entries) {
-        const absPath = path.join(rootPath, entry.name);
-        if (entry.isDirectory()) {
-          await walk(absPath, depth + 1);
-          continue;
-        }
-        const relPath = sanitizeRelativePath(path.relative(resource.containerPath, absPath));
-        const ext = extensionLower(relPath);
-        if (ext === '.usfm' || ext === '.sfm' || ext === '.txt') {
-          discoveredFiles.push(relPath);
-        }
-      }
-    };
-    await walk(resource.containerPath, 0);
-    candidate = pickCandidatePath(discoveredFiles, {}, bookId);
+    const discoveredFiles = await listLocalFilesRecursively(resource.containerPath, '', {
+      maxDepth: 8,
+    });
+    const sourceFiles = discoveredFiles.filter(relPath => {
+      const ext = extensionLower(relPath);
+      return ext === '.usfm' || ext === '.sfm' || ext === '.txt';
+    });
+    candidate = pickCandidatePath(sourceFiles, {}, bookId);
   }
 
   if (!candidate) {
     throw new Error(`No source USFM found in ${resource.containerPath}.`);
   }
 
-  const absPath = path.join(resource.containerPath, candidate.path);
-  const text = await fs.promises.readFile(absPath, 'utf8');
+  const absPath = joinPath(resource.containerPath, candidate.path);
+  const text = await readAbsoluteText(absPath);
+  if (!text) {
+    throw new Error(`Could not read source file ${candidate.path} from ${resource.containerPath}.`);
+  }
   return {
     resource,
     bookId: candidate.bookId,

@@ -85,9 +85,41 @@ function createNetMock(handlers) {
   });
 }
 
-function loadDownloaderWithNetMock(getMock) {
+function installElectronBridgeMock(options = {}) {
+  const userDataPath = options.userDataPath || null;
+  global.window = global.window || {};
+  global.window.electronAPI = {
+    app: {
+      getUserDataPath: jest.fn(async () => userDataPath),
+    },
+    fs: {
+      listAbsoluteEntries: jest.fn(async absPath => {
+        try {
+          const entries = await fs.promises.readdir(String(absPath), { withFileTypes: true });
+          return entries.map(entry => ({
+            name: entry.name,
+            isFile: entry.isFile(),
+            isDirectory: entry.isDirectory(),
+          }));
+        } catch {
+          return [];
+        }
+      }),
+      readAbsoluteText: jest.fn(async absPath => {
+        try {
+          return await fs.promises.readFile(String(absPath), 'utf8');
+        } catch {
+          return null;
+        }
+      }),
+    },
+  };
+}
+
+function loadDownloaderWithNetMock(getMock, options = {}) {
   jest.resetModules();
   jest.doMock(NET_PATH, () => ({ get: getMock }));
+  installElectronBridgeMock(options);
   const { resourceDownloader } = require(DOWNLOADER_PATH);
   return resourceDownloader;
 }
@@ -96,6 +128,9 @@ describe('DCS downloader integration', () => {
   afterEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
+    if (global.window) {
+      delete global.window.electronAPI;
+    }
   });
 
   test('listCatalogResources includes manifest-derived relations and metadata', async () => {

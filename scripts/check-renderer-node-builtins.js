@@ -7,10 +7,7 @@ const ROOT = path.resolve(__dirname, '..', 'src');
 const WORKSPACE_ROOT = path.resolve(__dirname, '..');
 const EXTENSIONS = new Set(['.ts', '.tsx']);
 const SKIP_DIRS = new Set(['js', 'academy']);
-const NODE_BUILTIN_ALLOWLIST = new Set([
-  'src/services/dcs/downloader.ts',
-  'src/utils/import/usfm.ts',
-]);
+const NODE_BUILTIN_ALLOWLIST = new Set([]);
 
 const RULES = [
   {

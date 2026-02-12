@@ -1,5 +1,4 @@
 import USFM from 'usfm-js';
-import path from 'path';
 import {
   ensureDir,
   writeJson,
@@ -21,7 +20,7 @@ export async function importUsfm(
   absFilePath: string,
   languageFallback = 'en'
 ): Promise<UsfmImportResult | null> {
-  const fileName = path.basename(absFilePath);
+  const fileName = absFilePath.split(/[\\/]/).pop() || absFilePath;
   const id = Date.now().toString();
   const projDir = `projects/${id}`;
 

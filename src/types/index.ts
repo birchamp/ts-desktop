@@ -33,6 +33,9 @@ declare global {
   }
 
   interface ElectronFileSystemAPI {
+    listAbsoluteEntries: (
+      absPath: string
+    ) => Promise<Array<{ name: string; isFile: boolean; isDirectory: boolean }>>;
     ensureDir: (relPath: string) => Promise<boolean>;
     readJson: <T = unknown>(relPath: string) => Promise<T | null>;
     writeJson: (relPath: string, data: unknown) => Promise<boolean>;

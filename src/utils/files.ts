@@ -1,5 +1,23 @@
 import { getBridge, invoke } from './ipc';
 
+export interface AbsoluteDirEntry {
+  name: string;
+  isFile: boolean;
+  isDirectory: boolean;
+}
+
+export async function listAbsoluteEntries(absPath: string): Promise<AbsoluteDirEntry[]> {
+  try {
+    const bridge = getBridge();
+    if (bridge?.fs?.listAbsoluteEntries) {
+      return await bridge.fs.listAbsoluteEntries(absPath);
+    }
+    return await invoke<AbsoluteDirEntry[]>('fs:listAbsoluteEntries', absPath);
+  } catch {
+    return [];
+  }
+}
+
 export async function getUserDataPath(): Promise<string | null> {
   try {
     const bridge = getBridge();
