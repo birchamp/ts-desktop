@@ -35,7 +35,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { generateUSFM, ProjectMeta, TranslationChunk } from '../../services/export/exporter';
 import { projectRepository, ProjectRecord } from '../../services/projectRepository';
 import { buildProjectBackup } from '../../services/backup/projectBackup';
-import { readText } from '../../utils/files';
+import { readText, writeAbsoluteFile } from '../../utils/files';
 
 interface ExportDialogProps {
   open: boolean;
@@ -176,7 +176,10 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ open, onClose, projectId })
         // Write file
         const encoder = new TextEncoder();
         const data = encoder.encode(content);
-        await window.electronAPI?.fs.writeFile(saveResult.filePath, data);
+        const writeOk = await writeAbsoluteFile(saveResult.filePath, data);
+        if (!writeOk) {
+          throw new Error('Failed to write export output file.');
+        }
 
         setProgress(100);
         setResult({

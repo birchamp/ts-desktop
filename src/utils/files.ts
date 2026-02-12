@@ -122,6 +122,18 @@ export async function copyAbsoluteToUserData(relPath: string, absPath: string): 
   }
 }
 
+export async function writeAbsoluteFile(absPath: string, data: Uint8Array): Promise<boolean> {
+  try {
+    const bridge = getBridge();
+    if (bridge?.fs?.writeAbsoluteFile) {
+      return await bridge.fs.writeAbsoluteFile(absPath, data);
+    }
+    return await invoke<boolean>('fs:writeAbsoluteFile', { absPath, data });
+  } catch {
+    return false;
+  }
+}
+
 export function minimizeWindow(): boolean {
   const bridge = getBridge();
   if (bridge?.window) {

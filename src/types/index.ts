@@ -40,6 +40,7 @@ declare global {
     writeFile: (relPath: string, data: Uint8Array) => Promise<boolean>;
     readAbsoluteText: (absPath: string) => Promise<string | null>;
     copyAbsoluteToUserData: (relPath: string, absPath: string) => Promise<boolean>;
+    writeAbsoluteFile: (absPath: string, data: Uint8Array) => Promise<boolean>;
   }
 
   interface ElectronAppAPI {

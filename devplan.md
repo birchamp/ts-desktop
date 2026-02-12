@@ -1,6 +1,6 @@
 # translationStudio Desktop Modernization Plan
 
-Last updated: 2026-02-11 (click-through evidence automation branch in progress)
+Last updated: 2026-02-12 (Gate 1 macOS parity ready; click-through automation branch pending merge)
 
 ## Objective
 
@@ -31,23 +31,28 @@ Deliver a modern Electron + React + TypeScript desktop app that behaves the same
     - `npm run lint` (warnings only; no errors)
     - `npm run build:dev`
     - `npm test -- __tests__/dcs-downloader.integration.test.js __tests__/macos-parity-evidence.integration.test.js --runInBand --watchman=false`
+- Automated macOS click-through coverage now exists for previously blocked UI workflows via:
+  - `npm run test:ui:macos`
+  - `scripts/playwright-macos-clickthrough.js`
+- Export path handling now supports absolute save targets through typed IPC (`fs:writeAbsoluteFile`) to match native save-dialog output paths.
 
 Open risks still present:
 
 - Lint debt is reduced to warnings, but a warning budget policy is not yet defined.
 - Security posture is intentionally permissive (`nodeIntegration: true`, `contextIsolation: false`) while migration continues.
-- Feature parity is not yet proven; Gate 1 checklist still has remaining `BLOCKED` workflows and remains `NOT READY`.
+- macOS parity evidence is now green, but Windows/Linux parity evidence is not yet established.
 - Dependency risk remains high (legacy packages and known audit findings).
 
-Current branch implementation status (`codex/g1-clickthrough-evidence-automation`):
+Current branch implementation status (`codex/g1-playwright-clickthrough-validation`):
 
 - Added targeted integration evidence file `__tests__/macos-parity-evidence.integration.test.js` that verifies:
   - project lifecycle repository behavior (create/open/recent/delete)
   - USFM import success/failure behavior
   - backup export/import roundtrip including translation + review draft restoration
 - Updated `gate:check` command to include parity-evidence integration tests.
-- Updated Gate 1 checklist notes/statuses using new automated evidence (I-01 and I-04 moved to `PASS`).
-- Remaining gap: UI click-through verification is still required for workflow entries that remain `BLOCKED`.
+- Added Playwright-driven click-through runner `scripts/playwright-macos-clickthrough.js` and npm command `test:ui:macos`.
+- Updated export flow to write files using absolute path IPC (`fs:writeAbsoluteFile`) so automation and native save paths both persist correctly.
+- Updated Gate 1 checklist notes/statuses with click-through results (P-01/P-02/P-03/P-04, I-03, X-02, T-03, A-01/A-02 now `PASS`).
 
 ## Execution Strategy (Optimal Order)
 
@@ -97,7 +102,7 @@ Planned next branches:
    Scope: re-run and record updated macOS Gate 1 workflow evidence after recent parity implementations.
 4. [x] `codex/g1-review-workflow-parity`
    Scope: close review workflow parity gap with actionable review queue behavior and persisted review outcomes.
-5. [ ] `codex/g1-clickthrough-evidence-automation`
+5. [ ] `codex/g1-playwright-clickthrough-validation`
    Scope: strengthen Gate 1 evidence with targeted automation and reduce manual-only verification surface.
 
 ### Gate 0: Stabilize Build and Runtime (Complete)
@@ -135,7 +140,7 @@ Exit criteria:
 
 - [x] Parity checklist exists and is versioned in repo.
 - [x] Each macOS workflow marked Pass/Fail/Blocked with notes.
-- [ ] No P0/P1 functional regressions against legacy behavior.
+- [x] No P0/P1 functional regressions against legacy behavior.
 
 Door43 alignment additions (required for parity):
 
@@ -201,9 +206,9 @@ Exit criteria:
 
 ## Immediate Next Work (Recommended)
 
-1. Commit and merge `codex/g1-clickthrough-evidence-automation`.
-2. Re-run Gate 1 macOS checklist with interactive click-through for remaining `BLOCKED` workflows.
-3. Confirm Gate 1 exit criterion (`No P0/P1 regressions`) from interactive evidence; if satisfied, advance to Gate 2.
+1. Commit and merge `codex/g1-playwright-clickthrough-validation`.
+2. Open Gate 2 branch and implement typed IPC migration plan for secure Electron defaults.
+3. Add a renderer Node builtin guard and run parity regressions under tightened security settings.
 
 Progress update:
 
@@ -220,8 +225,8 @@ Progress update:
 - `codex/g0-smoke-and-gating-automation` is merged to `master`.
 - `codex/g1-macos-parity-rerun` is merged to `master`.
 - `codex/g1-review-workflow-parity` is merged to `master`.
-- `codex/g1-clickthrough-evidence-automation` is in progress.
-- macOS Gate 1 checklist execution run is recorded in `docs/macos-parity-checklist.md` (current result: `NOT READY`).
+- `codex/g1-playwright-clickthrough-validation` implementation is complete and pending merge.
+- macOS Gate 1 checklist execution run is recorded in `docs/macos-parity-checklist.md` (current result: `READY`).
 
 Door43 2026 technical note:
 

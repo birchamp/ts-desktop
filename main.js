@@ -210,6 +210,17 @@ function initialize() {
         } catch (e) { log('fs:copyAbsoluteToUserData error', { absPath, relPath, err: e && e.message }); return false; }
     });
 
+    ipcMain.handle('fs:writeAbsoluteFile', async (event, payload) => {
+        const { absPath, data } = payload || {};
+        try {
+            const dst = String(absPath || '');
+            if (!dst) return false;
+            await fsp.mkdir(path.dirname(dst), { recursive: true });
+            await fsp.writeFile(dst, Buffer.from(data || []));
+            return true;
+        } catch (e) { log('fs:writeAbsoluteFile error', { absPath, err: e && e.message }); return false; }
+    });
+
     ipcMain.handle('window:minimize', () => {
         try { mainWindow && mainWindow.minimize(); return true; }
         catch (e) { log('window:minimize error', e && e.message); return false; }

@@ -131,6 +131,10 @@ const electronAPI = {
     },
     readAbsoluteText: (absPath) => ipcRenderer.invoke('fs:readAbsoluteText', absPath),
     copyAbsoluteToUserData: (relPath, absPath) => ipcRenderer.invoke('fs:copyAbsoluteToUserData', { relPath, absPath }),
+    writeAbsoluteFile: (absPath, data) => {
+      const payload = data instanceof Uint8Array ? Buffer.from(data) : data;
+      return ipcRenderer.invoke('fs:writeAbsoluteFile', { absPath, data: payload });
+    },
   },
   app: {
     getUserDataPath: () => ipcRenderer.invoke('app:getUserDataPath'),
