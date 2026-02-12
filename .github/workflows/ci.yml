@@ -14,7 +14,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
         include:
           - os: ubuntu-latest
-            smoke_command: xvfb-run -a npm run smoke:startup
+            smoke_command: xvfb-run -a env TS_SMOKE_NO_SANDBOX=1 npm run smoke:startup
           - os: macos-latest
             smoke_command: npm run smoke:startup
           - os: windows-latest
@@ -29,6 +29,14 @@ jobs:
         with:
           node-version: 18
           cache: 'npm'
+
+      - name: Normalize line endings (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+          git reset --hard HEAD
 
       - name: Install dependencies
         run: npm install --legacy-peer-deps

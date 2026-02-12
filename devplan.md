@@ -1,6 +1,6 @@
 # translationStudio Desktop Modernization Plan
 
-Last updated: 2026-02-12 (Gate 2 merged; Gate 3 cross-platform validation branch started)
+Last updated: 2026-02-12 (Gate 3 first matrix evidence captured; CI remediation branch in progress)
 
 ## Objective
 
@@ -43,13 +43,21 @@ Open risks still present:
 - macOS parity evidence is now green, but Windows/Linux parity evidence is not yet established.
 - Dependency risk remains high (legacy packages and known audit findings).
 
-Current branch implementation status (`codex/g3-ci-matrix-smoke`):
+Current branch implementation status (`codex/g3-ci-run-evidence`):
 
-- CI workflow is being expanded to an OS matrix (`ubuntu-latest`, `macos-latest`, `windows-latest`).
-- Startup smoke script is generalized for cross-platform CI execution.
-- Added workflow smoke lane (`npm run smoke:workflows`) for open/import/export/review evidence test coverage.
-- CI matrix now runs workflow smoke and startup smoke per OS.
-- Cross-platform checklist scaffold added in `docs/cross-platform-parity-checklist.md` for Windows/Linux status tracking.
+- Gate 3 CI matrix branch (`codex/g3-ci-matrix-smoke`) has been merged to `master`.
+- First cross-platform CI run after merge is complete:
+  - GitHub Actions run id `21954395398`
+  - Trigger: push to `master` on 2026-02-12T16:09:00Z
+  - Result: `failure` (Windows lint CRLF issue, Linux startup sandbox issue)
+- Remediations now implemented on this branch:
+  - Windows: line-ending normalization step in CI + repository `.gitattributes` LF policy.
+  - Linux: startup smoke runs with `TS_SMOKE_NO_SANDBOX=1` on Ubuntu CI, consumed by `scripts/smoke-startup.js`.
+- Local validation after remediation passes:
+  - `npm run lint`
+  - `npm run smoke:workflows`
+  - `npm run gate:check`
+  - `npm run smoke:startup`
 
 ## Execution Strategy (Optimal Order)
 
@@ -103,8 +111,10 @@ Planned next branches:
    Scope: strengthen Gate 1 evidence with targeted automation and reduce manual-only verification surface.
 6. [x] `codex/g2-typed-ipc-guardrails`
    Scope: begin Gate 2 by removing renderer-side direct Electron access patterns and adding migration guardrails.
-7. [ ] `codex/g3-ci-matrix-smoke`
+7. [x] `codex/g3-ci-matrix-smoke`
    Scope: establish cross-platform CI matrix with startup + workflow smoke coverage for Gate 3.
+8. [ ] `codex/g3-ci-run-evidence`
+   Scope: capture first matrix run outcomes, apply CI remediations, and close first Windows/Linux Gate 3 evidence rerun.
 
 ### Gate 0: Stabilize Build and Runtime (Complete)
 
@@ -207,9 +217,9 @@ Exit criteria:
 
 ## Immediate Next Work (Recommended)
 
-1. Complete and merge `codex/g3-ci-matrix-smoke`.
-2. Run the full CI matrix and collect first Windows/Linux results in `docs/cross-platform-parity-checklist.md`.
-3. Add additional Windows/Linux workflow smoke lanes beyond the current parity-evidence test set as needed.
+1. Push `codex/g3-ci-run-evidence` and run CI to verify Windows/Linux remediations.
+2. Update `docs/cross-platform-parity-checklist.md` with rerun outcomes and Gate 3 readiness.
+3. Merge `codex/g3-ci-run-evidence` after first all-green matrix run.
 
 Progress update:
 
@@ -228,7 +238,9 @@ Progress update:
 - `codex/g1-review-workflow-parity` is merged to `master`.
 - `codex/g1-playwright-clickthrough-validation` is merged to `master`.
 - `codex/g2-typed-ipc-guardrails` is merged to `master`.
-- `codex/g3-ci-matrix-smoke` is in progress.
+- `codex/g3-ci-matrix-smoke` is merged to `master`.
+- `codex/g3-ci-run-evidence` is in progress.
+- Gate 3 first matrix run evidence (`21954395398`) is recorded; remediation changes are implemented locally and awaiting CI rerun confirmation.
 - macOS Gate 1 checklist execution run is recorded in `docs/macos-parity-checklist.md` (current result: `READY`).
 
 Door43 2026 technical note:

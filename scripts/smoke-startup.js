@@ -10,10 +10,15 @@ function getTimeoutMs() {
 const timeoutMs = getTimeoutMs();
 const env = { ...process.env };
 delete env.ELECTRON_RUN_AS_NODE;
+const launchArgs = ['scripts/run-electron.js', '.', '-remote-debugging-port=9222'];
+
+if (process.platform === 'linux' && process.env.TS_SMOKE_NO_SANDBOX === '1') {
+  launchArgs.push('--no-sandbox');
+}
 
 console.log(`Smoke test (${process.platform}): launching app for ${timeoutMs}ms...`);
 
-const child = spawn(process.execPath, ['scripts/run-electron.js', '.', '-remote-debugging-port=9222'], {
+const child = spawn(process.execPath, launchArgs, {
   cwd: process.cwd(),
   env,
   stdio: 'inherit',
