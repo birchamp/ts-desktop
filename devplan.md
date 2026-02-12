@@ -46,7 +46,9 @@ Open risks still present:
 Current branch implementation status (`codex/g3-ci-matrix-smoke`):
 
 - CI workflow is being expanded to an OS matrix (`ubuntu-latest`, `macos-latest`, `windows-latest`).
-- Startup smoke script is being generalized for cross-platform CI execution.
+- Startup smoke script is generalized for cross-platform CI execution.
+- Added workflow smoke lane (`npm run smoke:workflows`) for open/import/export/review evidence test coverage.
+- CI matrix now runs workflow smoke and startup smoke per OS.
 - Cross-platform checklist scaffold added in `docs/cross-platform-parity-checklist.md` for Windows/Linux status tracking.
 
 ## Execution Strategy (Optimal Order)
@@ -102,7 +104,7 @@ Planned next branches:
 6. [x] `codex/g2-typed-ipc-guardrails`
    Scope: begin Gate 2 by removing renderer-side direct Electron access patterns and adding migration guardrails.
 7. [ ] `codex/g3-ci-matrix-smoke`
-   Scope: establish cross-platform CI matrix and startup smoke coverage for Gate 3.
+   Scope: establish cross-platform CI matrix with startup + workflow smoke coverage for Gate 3.
 
 ### Gate 0: Stabilize Build and Runtime (Complete)
 
@@ -207,7 +209,7 @@ Exit criteria:
 
 1. Complete and merge `codex/g3-ci-matrix-smoke`.
 2. Run the full CI matrix and collect first Windows/Linux results in `docs/cross-platform-parity-checklist.md`.
-3. Expand from startup smoke to targeted workflow smoke on Windows/Linux (open/import/export/review lanes).
+3. Add additional Windows/Linux workflow smoke lanes beyond the current parity-evidence test set as needed.
 
 Progress update:
 

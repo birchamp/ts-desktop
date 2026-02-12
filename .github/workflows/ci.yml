@@ -42,6 +42,9 @@ jobs:
       - name: Build (dev)
         run: npm run build:dev
 
+      - name: Workflow smoke (open/import/export/review)
+        run: npm run smoke:workflows
+
       - name: Startup smoke
         run: ${{ matrix.smoke_command }}
 
