@@ -140,14 +140,7 @@ export function minimizeWindow(): boolean {
     bridge.window.minimize();
     return true;
   }
-  try {
-    const ipc = (window as any)?.require?.('electron')?.ipcRenderer;
-    if (!ipc) return false;
-    ipc.send('main-window', 'minimize');
-    return true;
-  } catch {
-    return false;
-  }
+  return false;
 }
 
 export function maximizeWindow(): boolean {
@@ -156,14 +149,7 @@ export function maximizeWindow(): boolean {
     bridge.window.maximize();
     return true;
   }
-  try {
-    const ipc = (window as any)?.require?.('electron')?.ipcRenderer;
-    if (!ipc) return false;
-    ipc.send('main-window', 'maximize');
-    return true;
-  } catch {
-    return false;
-  }
+  return false;
 }
 
 export function closeWindow(): boolean {
@@ -172,12 +158,5 @@ export function closeWindow(): boolean {
     bridge.window.close();
     return true;
   }
-  try {
-    const ipc = (window as any)?.require?.('electron')?.ipcRenderer;
-    if (!ipc) return false;
-    ipc.send('main-window', 'close');
-    return true;
-  } catch {
-    return false;
-  }
+  return false;
 }

@@ -36,6 +36,7 @@ import { generateUSFM, ProjectMeta, TranslationChunk } from '../../services/expo
 import { projectRepository, ProjectRecord } from '../../services/projectRepository';
 import { buildProjectBackup } from '../../services/backup/projectBackup';
 import { readText, writeAbsoluteFile } from '../../utils/files';
+import { saveDialog } from '../../utils/dialog';
 
 interface ExportDialogProps {
   open: boolean;
@@ -161,7 +162,7 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ open, onClose, projectId })
       setProgress(70);
 
       // Show save dialog
-      const saveResult = await window.electronAPI?.dialog.save({
+      const saveResult = await saveDialog({
         defaultPath: filename,
         filters: [
           exportFormat === 'usfm'

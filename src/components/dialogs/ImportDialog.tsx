@@ -30,6 +30,7 @@ import {
 import { Description, CheckCircle, Error as ErrorIcon, Upload, Folder } from '@mui/icons-material';
 import React, { useState, useCallback } from 'react';
 import { importUsfm } from '../../utils/import/usfm';
+import { openDialog } from '../../utils/dialog';
 
 interface ImportDialogProps {
   open: boolean;
@@ -69,7 +70,7 @@ const ImportDialog: React.FC<ImportDialogProps> = ({ open, onClose, onImportComp
 
   const handleFileSelect = useCallback(async () => {
     try {
-      const result = await window.electronAPI?.dialog.open({
+      const result = await openDialog({
         properties: ['openFile', 'multiSelections'],
         filters: [
           { name: 'USFM Files', extensions: ['usfm', 'sfm', 'txt'] },

@@ -1,48 +1,50 @@
 import { getBridge, invoke } from './ipc';
 
-export interface OpenResult {
-  canceled: boolean;
-  filePaths: string[];
-}
-
-export interface SaveResult {
-  canceled: boolean;
-  filePath?: string;
+export async function openDialog(
+  options?: ElectronDialogOpenOptions
+): Promise<ElectronDialogOpenResult> {
+  try {
+    const bridge = getBridge();
+    if (bridge?.dialog?.open) {
+      return await bridge.dialog.open(options);
+    }
+    const result = await invoke<ElectronDialogOpenResult>('dialog:open', options || {});
+    return result || { canceled: true, filePaths: [] };
+  } catch {
+    return { canceled: true, filePaths: [] };
+  }
 }
 
 export async function openFile(
-  filters?: { name: string; extensions: string[] }[],
-  properties: string[] = ['openFile']
-): Promise<OpenResult> {
-  const fallback: OpenResult = { canceled: true, filePaths: [] };
-  const bridge = getBridge();
+  filters?: ElectronDialogFilter[]
+): Promise<ElectronDialogOpenResult> {
+  return openDialog({
+    properties: ['openFile'],
+    filters: filters || [],
+  });
+}
+
+export async function saveDialog(
+  options?: ElectronDialogSaveOptions
+): Promise<ElectronDialogSaveResult> {
   try {
-    if (bridge?.dialog) {
-      const res = await bridge.dialog.open({ properties, filters });
-      return res;
+    const bridge = getBridge();
+    if (bridge?.dialog?.save) {
+      return await bridge.dialog.save(options);
     }
-    const res = await invoke<OpenResult>('dialog:open', { properties, filters });
-    return res;
+    const result = await invoke<ElectronDialogSaveResult>('dialog:save', options || {});
+    return result || { canceled: true };
   } catch {
-    return fallback;
+    return { canceled: true };
   }
 }
 
-export async function openDirectory(): Promise<OpenResult> {
-  return openFile(undefined, ['openDirectory']);
-}
-
-export async function saveFile(defaultPath?: string): Promise<SaveResult> {
-  const fallback: SaveResult = { canceled: true };
-  const bridge = getBridge();
-  try {
-    if (bridge?.dialog) {
-      const res = await bridge.dialog.save({ defaultPath });
-      return res;
-    }
-    const res = await invoke<SaveResult>('dialog:save', { defaultPath });
-    return res;
-  } catch {
-    return fallback;
-  }
+export async function saveFile(
+  defaultPath?: string,
+  filters?: ElectronDialogFilter[]
+): Promise<ElectronDialogSaveResult> {
+  return saveDialog({
+    defaultPath,
+    filters: filters || [],
+  });
 }

@@ -1,4 +1,4 @@
-# Electron Security Audit — September 2025
+# Electron Security Audit — February 2026
 
 ## Summary
 The renderer currently runs with `nodeIntegration: true` and `contextIsolation: false`. This setting was re-enabled temporarily to get the new React dashboard working, but it reintroduces classic Electron security risks. We audited the code paths to map out everything that still depends on direct Node primitives so that we can safely restore the default hardened configuration (`nodeIntegration: false`, `contextIsolation: true`, `sandbox: true`).
@@ -8,14 +8,14 @@ The renderer currently runs with `nodeIntegration: true` and `contextIsolation: 
 |------|-------------|--------|
 | Webpack externals | Bundle still outputs `require("fs")`, `require("path")`, `require("crypto")` stubs because several dependencies (notably `sql.js` and legacy Polymer scripts) import Node modules. | `dist/js/bundle.js:80743-80765` |
 | Legacy JS modules | Numerous files under `src/js/**` require Node builtins (`fs`, `path`, `child_process`, etc.). Even if they are not imported yet, they will break once referenced by React unless we isolate them behind IPC. | `rg "require('fs')" src/js` |
-| Renderer logging | `src/index.tsx` still checks `window.require('electron')` for debugging (guarded, but indicates pending dependency). | `src/index.tsx:14-19` |
+| Remaining TS Node imports | Modern TypeScript sources still include a small baseline of Node-builtin imports that must be migrated behind IPC before secure flags can be flipped. | `src/services/dcs/downloader.ts`, `src/utils/import/usfm.ts` |
 
 ## IPC Surface (Current)
 `main.js` exposes the following handlers through `ipcMain.handle`:
 - `dialog:open`, `dialog:save`
 - `app:getUserDataPath`
 - `fs:ensureDir`, `fs:readJson`, `fs:writeJson`, `fs:readFile`, `fs:writeFile`
-- `fs:readAbsoluteText`, `fs:copyAbsoluteToUserData`
+- `fs:readAbsoluteText`, `fs:copyAbsoluteToUserData`, `fs:writeAbsoluteFile`
 
 `preload.js` currently relays:
 - `electronAPI.send`, `electronAPI.invoke`, `electronAPI.on`
@@ -38,7 +38,9 @@ The renderer currently runs with `nodeIntegration: true` and `contextIsolation: 
 
 ## Next Actions (Phase 1 scope)
 - [x] Create typed wrapper in `src/utils/ipc.ts` that documents available IPC channels and discourages direct access to `window.electronAPI`.
-- [ ] Update React code to consume the wrapper instead of touching `window.electronAPI` (dialog/files now use it; other helpers pending).
-- [ ] Start replacing legacy `src/js/**` imports with the new typed services to minimize Node usage before flipping security switches.
+- [x] Update React code to consume typed wrappers instead of touching `window.electronAPI` directly for dialog/files/workflow actions in modern TS screens/components.
+- [x] Add a renderer guard (`npm run guard:renderer-node`) to prevent reintroduction of `window.require`, direct Electron imports, and new Node-builtin imports in TS/TSX.
+- [ ] Remove baseline Node-builtin exceptions in `src/services/dcs/downloader.ts` and `src/utils/import/usfm.ts` by moving file/path operations behind IPC.
+- [ ] Start replacing remaining legacy `src/js/**` imports with new typed services to minimize Node usage before flipping security switches.
 
-Document prepared by Codex assistant on 2025‑09‑17.
+Document prepared by Codex assistant on 2026-02-12.

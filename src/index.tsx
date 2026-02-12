@@ -3,7 +3,7 @@ import { version as reactVersion } from 'react';
 import { version as reactDomVersion } from 'react-dom';
 import App from './App';
 import DevErrorBoundary from './components/DevErrorBoundary';
-import { send } from './utils/ipc';
+import { getBridge, send } from './utils/ipc';
 
 // Initialize the app
 const container = document.getElementById('root');
@@ -13,7 +13,7 @@ if (!container) {
 
 console.log('[renderer] Mounting React app');
 try {
-  console.log('[renderer] electronAPI available:', typeof (window as any).electronAPI);
+  console.log('[renderer] electronAPI available:', typeof getBridge());
   // Log React/ReactDOM versions to main log for diagnostics
   try {
     console.log(`[renderer] React ${reactVersion}, ReactDOM ${reactDomVersion}`);
@@ -45,7 +45,6 @@ try {
 }
 
 // Signal to Electron that the React app has loaded
-// Prefer Electron's ipcRenderer via window.require when available
 function notifyMainLoaded() {
   try {
     console.log('[renderer] Sending main-loading-done');
