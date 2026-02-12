@@ -22,5 +22,5 @@ Gate 3 tracks startup and core workflow parity on Windows and Linux after macOS 
 - macOS evidence: `READY` (from Gate 1)
 - Windows evidence: `READY`
 - Linux evidence: `READY`
-- Current CI matrix run: `success` (GitHub Actions run `21963029888`, started 2026-02-12T20:26:43Z, completed 2026-02-12T20:31:19Z)
+- Current CI matrix run: `success` (GitHub Actions run `21963245227`, started 2026-02-12T20:33:34Z, completed 2026-02-12T20:36:36Z; confirms passing PR run `21963029888`)
 - Gate 3 readiness: `READY`

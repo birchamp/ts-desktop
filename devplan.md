@@ -1,6 +1,6 @@
 # translationStudio Desktop Modernization Plan
 
-Last updated: 2026-02-12 (Gate 3 matrix green on all OSes; merge pending)
+Last updated: 2026-02-12 (Gate 3 complete and merged to master; master CI green)
 
 ## Objective
 
@@ -39,11 +39,11 @@ Deliver a modern Electron + React + TypeScript desktop app that behaves the same
 Open risks still present:
 
 - Lint debt is reduced to warnings, but a warning budget policy is not yet defined.
-- Security posture for primary app windows is now hardened (`nodeIntegration: false`, `contextIsolation: true`, `sandbox: true`); cross-platform verification remains pending.
-- macOS parity evidence is now green, but Windows/Linux parity evidence is not yet established.
+- Security posture for primary app windows is now hardened (`nodeIntegration: false`, `contextIsolation: true`, `sandbox: true`); release hardening and signing remain pending.
+- Cross-platform parity is validated for CI smoke coverage, but deeper manual Windows/Linux parity walkthroughs are still limited.
 - Dependency risk remains high (legacy packages and known audit findings).
 
-Current branch implementation status (`codex/g3-ci-run-evidence`):
+Gate 3 completion status (`codex/g3-ci-run-evidence`, now merged):
 
 - Gate 3 CI matrix branch (`codex/g3-ci-matrix-smoke`) has been merged to `master`.
 - First cross-platform CI run after merge is complete:
@@ -61,6 +61,11 @@ Current branch implementation status (`codex/g3-ci-run-evidence`):
 - Remediation CI validation is complete:
   - GitHub Actions run id `21963029888`
   - Trigger: pull request `#1` for `codex/g3-ci-run-evidence`
+  - Result: `success` across `ubuntu-latest`, `macos-latest`, and `windows-latest`
+- Branch merged to `master` with fast-forward.
+- Post-merge CI validation is complete:
+  - GitHub Actions run id `21963245227`
+  - Trigger: push to `master` on 2026-02-12T20:33:34Z
   - Result: `success` across `ubuntu-latest`, `macos-latest`, and `windows-latest`
 
 ## Execution Strategy (Optimal Order)
@@ -118,7 +123,7 @@ Planned next branches:
 7. [x] `codex/g3-ci-matrix-smoke`
    Scope: establish cross-platform CI matrix with startup + workflow smoke coverage for Gate 3.
 8. [x] `codex/g3-ci-run-evidence`
-   Scope: capture first matrix run outcomes, apply CI remediations, and close first Windows/Linux Gate 3 evidence rerun (ready to merge).
+   Scope: capture first matrix run outcomes, apply CI remediations, and close first Windows/Linux Gate 3 evidence rerun.
 
 ### Gate 0: Stabilize Build and Runtime (Complete)
 
@@ -221,9 +226,9 @@ Exit criteria:
 
 ## Immediate Next Work (Recommended)
 
-1. Merge `codex/g3-ci-run-evidence` to `master`.
-2. Mark Gate 3 complete in this plan and start Gate 4 release/distribution implementation branch.
-3. Define initial Gate 4 scope branch (packaging baseline + signing/notarization prerequisites).
+1. Create `codex/g4-packaging-baseline` from `master`.
+2. Implement initial production packaging baseline and CI artifact strategy for all three OSes.
+3. Define signing/notarization prerequisites and platform-specific release checklists.
 
 Progress update:
 
@@ -243,9 +248,10 @@ Progress update:
 - `codex/g1-playwright-clickthrough-validation` is merged to `master`.
 - `codex/g2-typed-ipc-guardrails` is merged to `master`.
 - `codex/g3-ci-matrix-smoke` is merged to `master`.
-- `codex/g3-ci-run-evidence` is in progress.
+- `codex/g3-ci-run-evidence` is merged to `master`.
 - Gate 3 first matrix run evidence (`21954395398`) is recorded with documented root causes and remediation scope.
-- Gate 3 remediation rerun (`21963029888`) passed on all three OSes; branch is ready to merge.
+- Gate 3 remediation rerun (`21963029888`) passed on all three OSes.
+- Post-merge master CI run (`21963245227`) passed on all three OSes.
 - macOS Gate 1 checklist execution run is recorded in `docs/macos-parity-checklist.md` (current result: `READY`).
 
 Door43 2026 technical note:
