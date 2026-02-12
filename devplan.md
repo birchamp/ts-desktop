@@ -1,6 +1,6 @@
 # translationStudio Desktop Modernization Plan
 
-Last updated: 2026-02-12 (Gate 3 first matrix evidence captured; CI remediation branch in progress)
+Last updated: 2026-02-12 (Gate 3 matrix green on all OSes; merge pending)
 
 ## Objective
 
@@ -58,6 +58,10 @@ Current branch implementation status (`codex/g3-ci-run-evidence`):
   - `npm run smoke:workflows`
   - `npm run gate:check`
   - `npm run smoke:startup`
+- Remediation CI validation is complete:
+  - GitHub Actions run id `21963029888`
+  - Trigger: pull request `#1` for `codex/g3-ci-run-evidence`
+  - Result: `success` across `ubuntu-latest`, `macos-latest`, and `windows-latest`
 
 ## Execution Strategy (Optimal Order)
 
@@ -113,8 +117,8 @@ Planned next branches:
    Scope: begin Gate 2 by removing renderer-side direct Electron access patterns and adding migration guardrails.
 7. [x] `codex/g3-ci-matrix-smoke`
    Scope: establish cross-platform CI matrix with startup + workflow smoke coverage for Gate 3.
-8. [ ] `codex/g3-ci-run-evidence`
-   Scope: capture first matrix run outcomes, apply CI remediations, and close first Windows/Linux Gate 3 evidence rerun.
+8. [x] `codex/g3-ci-run-evidence`
+   Scope: capture first matrix run outcomes, apply CI remediations, and close first Windows/Linux Gate 3 evidence rerun (ready to merge).
 
 ### Gate 0: Stabilize Build and Runtime (Complete)
 
@@ -195,8 +199,8 @@ Scope:
 
 Exit criteria:
 
-- [ ] CI matrix green on all three OSes.
-- [ ] Workflow parity checklist includes Windows and Linux statuses.
+- [x] CI matrix green on all three OSes.
+- [x] Workflow parity checklist includes Windows and Linux statuses.
 
 ### Gate 4: Release and Distribution
 
@@ -217,9 +221,9 @@ Exit criteria:
 
 ## Immediate Next Work (Recommended)
 
-1. Push `codex/g3-ci-run-evidence` and run CI to verify Windows/Linux remediations.
-2. Update `docs/cross-platform-parity-checklist.md` with rerun outcomes and Gate 3 readiness.
-3. Merge `codex/g3-ci-run-evidence` after first all-green matrix run.
+1. Merge `codex/g3-ci-run-evidence` to `master`.
+2. Mark Gate 3 complete in this plan and start Gate 4 release/distribution implementation branch.
+3. Define initial Gate 4 scope branch (packaging baseline + signing/notarization prerequisites).
 
 Progress update:
 
@@ -240,7 +244,8 @@ Progress update:
 - `codex/g2-typed-ipc-guardrails` is merged to `master`.
 - `codex/g3-ci-matrix-smoke` is merged to `master`.
 - `codex/g3-ci-run-evidence` is in progress.
-- Gate 3 first matrix run evidence (`21954395398`) is recorded; remediation changes are implemented locally and awaiting CI rerun confirmation.
+- Gate 3 first matrix run evidence (`21954395398`) is recorded with documented root causes and remediation scope.
+- Gate 3 remediation rerun (`21963029888`) passed on all three OSes; branch is ready to merge.
 - macOS Gate 1 checklist execution run is recorded in `docs/macos-parity-checklist.md` (current result: `READY`).
 
 Door43 2026 technical note:
